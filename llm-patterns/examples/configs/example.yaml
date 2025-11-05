@@ -1,0 +1,20 @@
+# Example orchestrator configuration
+# This demonstrates how to configure agents and patterns via YAML
+
+ocAgents:
+  - acId: "analyst"
+    acProvider: "ollama"
+    acModel: "llama3.2"
+    acSystemPrompt: "You are a data analyst. Analyze the input and provide insights."
+
+  - acId: "strategist"
+    acProvider: "ollama"
+    acModel: "llama3.2"
+    acSystemPrompt: "You are a strategist. Take the analysis and recommend strategies."
+
+  - acId: "implementer"
+    acProvider: "ollama"
+    acModel: "llama3.2"
+    acSystemPrompt: "You are an implementer. Take the strategy and create an action plan."
+
+ocPattern: "Sequential"
