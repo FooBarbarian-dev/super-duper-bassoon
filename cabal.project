@@ -1,9 +1,9 @@
 packages:
-  llm-patterns/
-  llm-patterns-ui/
+  ./llm-patterns/
+  ./llm-patterns-ui/
 
 -- Resolver for dependencies
-index-state: 2024-01-01T00:00:00Z
+-- index-state: 2024-01-01T00:00:00Z
 
 -- Common flags
 package *
@@ -16,5 +16,5 @@ optimization: True
 -- if it's not on Hackage yet
 source-repository-package
   type: git
-  location: https://github.com/example/langchain-hs.git
+  location: git@github.com:tusharad/langchain-hs.git
   tag: main
