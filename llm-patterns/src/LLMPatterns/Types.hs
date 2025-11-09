@@ -7,8 +7,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
-
-{-# LANGUAE DeriveAnyClass #-}
+{-# LANGUAGE DeriveAnyClass #-}
 
 module LLMPatterns.Types where
 

@@ -3,6 +3,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DerivingStrategies #-}
 
 module LLMPatterns.Agent
   ( Agent
@@ -28,7 +29,7 @@ data AgentConfig = AgentConfig
   , acProvider :: Text
   , acModel :: Text
   , acSystemPrompt :: Text
-  } deriving (Show, Eq, Generic)
+  } deriving stock (Show, Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
 -- | Instead of existential types, use a function that captures the LLM behavior

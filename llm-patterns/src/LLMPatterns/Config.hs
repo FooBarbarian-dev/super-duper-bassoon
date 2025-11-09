@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -22,7 +23,7 @@ import Control.Monad (mapM)
 data OrchestratorConfig = OrchestratorConfig
   { ocAgents :: [AgentConfig]
   , ocPattern :: Pattern
-  } deriving (Show, Eq, Generic)
+  } deriving stock (Show, Eq, Generic)
   deriving anyclass (FromJSON)
 
 -- | Load orchestrator from YAML file
