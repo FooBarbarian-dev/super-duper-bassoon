@@ -11,15 +11,14 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Control.Monad (when)
 import Control.Monad.Except (runExceptT, throwError)
-import Control.Monad.State (runStateT, get, modify)
+import Control.Monad.State (runStateT, modify)
 import Data.Time.Clock (getCurrentTime, diffUTCTime)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (listToMaybe)
 
 -- | Handoff decision from agent output
 data HandoffDecision
   = Handle Text              -- Agent handles the request
-  | Handoff AgentId Text     -- Handoff to another agent with reason
+  | HandoffTo AgentId Text   -- Handoff to another agent with reason
 
 -- | Execute handoff pattern with agent routing
 -- More idiomatic: uses Map for O(log n) lookups, safer recursion with visit tracking
@@ -72,7 +71,7 @@ executeHandoff maxHops agents input
               case parseHandoffDecision output of
                 Handle finalOutput ->
                   pure finalOutput
-                Handoff nextId reason -> do
+                HandoffTo nextId reason -> do
                   -- Record handoff
                   modify $ \s -> s { esTrace = HandoffOccurred currentId nextId reason : esTrace s }
 
@@ -88,5 +87,5 @@ executeHandoff maxHops agents input
           -- Extract next agent ID from "HANDOFF: agentId reason..."
           case T.words (T.strip $ T.drop 8 rest) of
             (nextAgentText:reasonWords) ->
-              Handoff (AgentId nextAgentText) (T.unwords reasonWords)
+              HandoffTo (AgentId nextAgentText) (T.unwords reasonWords)
             [] -> Handle output

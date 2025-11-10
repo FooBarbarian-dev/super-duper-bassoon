@@ -9,7 +9,7 @@ import LLMPatterns.Agent
 import Data.Text (Text)
 import Control.Monad (foldM)
 import Control.Monad.Except (runExceptT)
-import Control.Monad.State (runStateT, get)
+import Control.Monad.State (runStateT)
 import Data.Time.Clock (getCurrentTime, diffUTCTime)
 
 -- | Execute agents sequentially, threading output through each

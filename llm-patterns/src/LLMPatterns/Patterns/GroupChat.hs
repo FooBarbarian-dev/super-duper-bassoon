@@ -9,7 +9,7 @@ import LLMPatterns.Agent
 import Data.Text (Text)
 import qualified Data.Text as T
 import Control.Monad.Except (runExceptT)
-import Control.Monad.State (runStateT, modify, get)
+import Control.Monad.State (runStateT, modify)
 import Data.Time.Clock (getCurrentTime, diffUTCTime)
 import Data.List (cycle)
 
@@ -41,10 +41,10 @@ executeGroupChat maxRounds agents input
   where
     -- Recursive chat implementation using tail recursion
     runChat :: Int -> [Agent] -> [Text] -> OrchestrationM [Text]
-    runChat round _ history | round >= maxRounds = pure history
-    runChat round (agent:restAgents) history = do
+    runChat roundNum _ history | roundNum >= maxRounds = pure history
+    runChat roundNum (agent:restAgents) history = do
       -- Record round start
-      modify $ \s -> s { esTrace = RoundStarted round : esTrace s }
+      modify $ \s -> s { esTrace = RoundStarted roundNum : esTrace s }
 
       -- Check for consensus
       if hasConsensus (lastOrInput history)
@@ -60,10 +60,10 @@ executeGroupChat maxRounds agents input
           let newHistory = history ++ [output]
 
           -- Record round completion
-          modify $ \s -> s { esTrace = RoundCompleted round : esTrace s }
+          modify $ \s -> s { esTrace = RoundCompleted roundNum : esTrace s }
 
           -- Continue with next round
-          runChat (round + 1) restAgents newHistory
+          runChat (roundNum + 1) restAgents newHistory
     runChat _ [] _ = pure []  -- Should never happen due to cycle
 
     -- Safe head with default

@@ -11,7 +11,6 @@ module Langchain.LLM.Core
   , Message(..)
   , Role(..)
   , MessageData(..)
-  , chat
   , defaultMessageData
   -- Re-export specific models for compatibility
   , OllamaModel(..)
@@ -19,7 +18,6 @@ module Langchain.LLM.Core
   ) where
 
 import Data.Text (Text)
-import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Data.Aeson (FromJSON, ToJSON)
 

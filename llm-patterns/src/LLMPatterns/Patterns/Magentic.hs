@@ -55,10 +55,10 @@ executeMagentic maxIter agents input
   where
     -- Build initial task ledger using manager agent
     buildTaskLedger :: Agent -> Text -> IO TaskLedger
-    buildTaskLedger manager input = do
+    buildTaskLedger manager inputGoal = do
       let prompt = T.unlines
             [ "Break down this goal into specific tasks:"
-            , input
+            , inputGoal
             , ""
             , "Format: one task per line."
             ]
@@ -71,7 +71,7 @@ executeMagentic maxIter agents input
           in pure $ TaskLedger tasks Set.empty
         Left _ ->
           -- Fallback: treat input as single task
-          pure $ TaskLedger [input] Set.empty
+          pure $ TaskLedger [inputGoal] Set.empty
 
     -- Execute task ledger recursively
     executeLedger :: [Agent] -> TaskLedger -> Int -> OrchestrationM Text
@@ -86,8 +86,7 @@ executeMagentic maxIter agents input
               modify $ \s -> s { esTrace = TaskCreated task : esTrace s }
 
               -- Get next worker
-              let worker = head $ drop iter $ cycle workers
-                  workers = take (length agents - 1) agents  -- Exclude manager
+              let worker = head $ drop iter $ cycle workersList
 
               -- Execute task
               _ <- promptAgent worker task
@@ -98,9 +97,9 @@ executeMagentic maxIter agents input
               let newLedger = ledger { tlCompleted = Set.insert task (tlCompleted ledger) }
 
               -- Continue with next iteration
-              executeLedger (tail workers) newLedger (iter + 1)
+              executeLedger (tail workersList) newLedger (iter + 1)
       where
-        workers = drop 1 agents
+        workersList = drop 1 agents
 
     -- Check if all tasks are complete
     allTasksComplete :: TaskLedger -> Bool
