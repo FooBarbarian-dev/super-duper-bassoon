@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE LambdaCase #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module LLMPatterns.TypesSpec (spec) where
 
@@ -8,7 +9,6 @@ import Test.QuickCheck
 import LLMPatterns.Types
 import qualified Data.Map.Strict as Map
 import Data.Aeson (encode, decode)
-import Data.Text (Text)
 import qualified Data.Text as T
 
 -- QuickCheck generators
@@ -92,18 +92,18 @@ spec = do
     it "should create AgentCompleted event" $ do
       let event = AgentCompleted (AgentId "test") "output"
       case event of
-        AgentCompleted aid output -> do
+        AgentCompleted aid out -> do
           unAgentId aid `shouldBe` "test"
-          output `shouldBe` "output"
+          out `shouldBe` "output"
         _ -> expectationFailure "Wrong event type"
 
     it "should create HandoffOccurred event" $ do
       let event = HandoffOccurred (AgentId "from") (AgentId "to") "reason"
       case event of
-        HandoffOccurred from to reason -> do
+        HandoffOccurred from to rsn -> do
           unAgentId from `shouldBe` "from"
           unAgentId to `shouldBe` "to"
-          reason `shouldBe` "reason"
+          rsn `shouldBe` "reason"
         _ -> expectationFailure "Wrong event type"
 
     it "should serialize/deserialize via JSON" $ property $ \event ->

@@ -6,6 +6,7 @@ import Test.Hspec
 import LLMPatterns.Config
 import LLMPatterns.Types
 import LLMPatterns.Agent
+import LLMPatterns.Orchestrator (Orchestrator(..))
 import System.IO.Temp (withSystemTempDirectory)
 import System.FilePath ((</>))
 import Control.Monad (forM_)
