@@ -495,14 +495,14 @@ function renderDAG(pattern) {
 // DAG Generation Functions
 function generateSequentialDAG(agents) {
   let code = 'graph TD\n';
-  code += '  Start([Input]) --> A0\n';
 
-  agents.forEach((agent, i) => {
-    code += `  A${i}[${agent}]\n`;
-    if (i < agents.length - 1) {
-      code += `  A${i} --> A${i + 1}\n`;
-    }
-  });
+  if (agents.length === 0) return code;
+
+  code += `  Start([Input]) --> A0["${agents[0]}"]\n`;
+
+  for (let i = 0; i < agents.length - 1; i++) {
+    code += `  A${i} --> A${i + 1}["${agents[i + 1]}"]\n`;
+  }
 
   code += `  A${agents.length - 1} --> End([Output])\n`;
   return code;
@@ -510,17 +510,19 @@ function generateSequentialDAG(agents) {
 
 function generateConcurrentDAG(agents, aggregation) {
   let code = 'graph TD\n';
+
+  if (agents.length === 0) return code;
+
+  const aggMethod = aggregation.charAt(0).toUpperCase() + aggregation.slice(1);
+
   code += '  Start([Input]) --> Broadcast{Broadcast}\n';
 
   agents.forEach((agent, i) => {
-    code += `  Broadcast --> A${i}[${agent}]\n`;
+    code += `  Broadcast --> A${i}["${agent}"]\n`;
   });
 
-  const aggMethod = aggregation.charAt(0).toUpperCase() + aggregation.slice(1);
-  code += `  Aggregate[${aggMethod}]\n`;
-
   agents.forEach((agent, i) => {
-    code += `  A${i} --> Aggregate\n`;
+    code += `  A${i} --> Aggregate["${aggMethod}"]\n`;
   });
 
   code += '  Aggregate --> End([Output])\n';
@@ -529,44 +531,48 @@ function generateConcurrentDAG(agents, aggregation) {
 
 function generateGroupChatDAG(agents, rounds) {
   let code = 'graph TD\n';
-  code += '  Start([Input]) --> Round1\n';
 
-  for (let r = 1; r <= Math.min(rounds, 3); r++) {
-    code += `  Round${r}[Round ${r}]\n`;
+  if (agents.length === 0) return code;
+
+  const maxRoundsToShow = Math.min(rounds, 3);
+
+  code += '  Start([Input]) --> Round1["Round 1"]\n';
+
+  for (let r = 1; r <= maxRoundsToShow; r++) {
     agents.forEach((agent, i) => {
-      code += `  Round${r} --> R${r}A${i}[${agent}]\n`;
+      code += `  Round${r} --> R${r}A${i}["${agent}"]\n`;
     });
 
-    if (r < Math.min(rounds, 3)) {
+    if (r < maxRoundsToShow) {
       agents.forEach((agent, i) => {
-        code += `  R${r}A${i} --> Round${r + 1}\n`;
+        code += `  R${r}A${i} --> Round${r + 1}["Round ${r + 1}"]\n`;
       });
     }
   }
 
   if (rounds > 3) {
-    code += `  R3A0 -.-> More[... ${rounds - 3} more rounds]\n`;
-    code += '  More -.-> Consensus\n';
+    code += `  R3A0 -.-> More["... ${rounds - 3} more rounds"]\n`;
+    code += '  More -.-> Consensus["Consensus"]\n';
   } else {
     agents.forEach((agent, i) => {
-      code += `  R${rounds}A${i} --> Consensus\n`;
+      code += `  R${maxRoundsToShow}A${i} --> Consensus["Consensus"]\n`;
     });
   }
 
-  code += '  Consensus[Consensus] --> End([Output])\n';
+  code += '  Consensus --> End([Output])\n';
   return code;
 }
 
 function generateHandoffDAG(agents) {
   let code = 'graph TD\n';
-  code += '  Start([Input]) --> A0\n';
 
-  agents.forEach((agent, i) => {
-    code += `  A${i}[${agent}]\n`;
-    if (i < agents.length - 1) {
-      code += `  A${i} -.->|handoff| A${i + 1}\n`;
-    }
-  });
+  if (agents.length === 0) return code;
+
+  code += `  Start([Input]) --> A0["${agents[0]}"]\n`;
+
+  for (let i = 0; i < agents.length - 1; i++) {
+    code += `  A${i} -.->|handoff| A${i + 1}["${agents[i + 1]}"]\n`;
+  }
 
   code += `  A${agents.length - 1} --> End([Output])\n`;
   return code;
@@ -574,18 +580,17 @@ function generateHandoffDAG(agents) {
 
 function generateMagenticDAG(agents) {
   let code = 'graph TD\n';
-  code += '  Start([Input]) --> Manager\n';
 
-  if (agents.length > 0) {
-    code += `  Manager[${agents[0]}]\n`;
+  if (agents.length === 0) return code;
 
-    for (let i = 1; i < agents.length; i++) {
-      code += `  Manager -->|task| W${i}[${agents[i]}]\n`;
-    }
+  code += `  Start([Input]) --> Manager["${agents[0]}"]\n`;
 
-    for (let i = 1; i < agents.length; i++) {
-      code += `  W${i} -->|result| Manager\n`;
-    }
+  for (let i = 1; i < agents.length; i++) {
+    code += `  Manager -->|task| W${i}["${agents[i]}"]\n`;
+  }
+
+  for (let i = 1; i < agents.length; i++) {
+    code += `  W${i} -->|result| Manager\n`;
   }
 
   code += '  Manager --> End([Output])\n';
