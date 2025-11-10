@@ -48,8 +48,8 @@ mkAgent aid model sysPrompt params = Agent
   { agentId = aid
   , agentPrompt = \input -> do
       let messages =
-            [ ChatMessage System sysPrompt defaultMessageData
-            , ChatMessage User input defaultMessageData
+            [ Message System sysPrompt defaultMessageData
+            , Message User input defaultMessageData
             ]
       chat model messages params
   , agentSystemPrompt = sysPrompt
@@ -72,11 +72,11 @@ promptAgent Agent{..} input = do
 -- | Smart constructors for common providers
 mkOllamaAgent :: AgentId -> Text -> Text -> Agent
 mkOllamaAgent aid modelName prompt =
-  mkAgent aid (Ollama modelName []) prompt Nothing
+  mkAgent aid (OllamaModel modelName []) prompt Nothing
 
 mkOpenAIAgent :: AgentId -> Text -> Text -> Agent
 mkOpenAIAgent aid modelName prompt =
-  mkAgent aid (OpenAI modelName Nothing []) prompt Nothing
+  mkAgent aid (OpenAIModel modelName Nothing []) prompt Nothing
 
 -- | Build agent from configuration
 -- This is a pure function that describes how to build an agent

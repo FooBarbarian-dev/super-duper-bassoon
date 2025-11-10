@@ -39,10 +39,10 @@ library
     LLMPatterns.Patterns.GroupChat
     LLMPatterns.Patterns.Handoff
     LLMPatterns.Patterns.Magentic
+    Langchain.LLM.Core
 
   build-depends:
     base              >= 4.14 && < 5,
-    langchain-hs      >= 0.0.1,
     text              >= 1.2,
     time              >= 1.9,
     async             >= 2.2,

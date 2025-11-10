@@ -12,9 +12,6 @@ package *
 -- Development settings
 optimization: True
 
--- You may need to add source-repository-package for langchain-hs
--- if it's not on Hackage yet
-source-repository-package
-  type: git
-  location: git@github.com:tusharad/langchain-hs.git
-  tag: main
+-- Note: langchain-hs is stubbed locally in llm-patterns/src/Langchain/
+-- for testing and compilation. To use a real LLM backend, replace the stub
+-- with actual langchain-hs integration.
