@@ -54,7 +54,21 @@ Interactive UI for pattern demonstration:
 - Cabal 3.0+
 - Ollama running locally (or OpenAI API key)
 
-### Build
+### One-Command Setup (Recommended)
+
+The easiest way to build, test, and launch the UI:
+
+```bash
+./build-and-run.sh
+```
+
+This script will:
+1. Pull latest changes from git
+2. Clean and build all projects
+3. Run all tests
+4. Launch the UI on http://localhost:8080 (if tests pass)
+
+### Manual Build
 
 ```bash
 # Build everything
@@ -65,6 +79,9 @@ cabal build llm-patterns
 
 # Build UI
 cabal build llm-patterns-ui
+
+# Run tests
+cabal test
 ```
 
 ### Run Examples
@@ -86,7 +103,7 @@ cabal run pattern-comparison
 cabal run llm-patterns-ui
 ```
 
-Then open: http://localhost:3000
+Then open: http://localhost:8080
 
 ## 📚 Documentation
 
