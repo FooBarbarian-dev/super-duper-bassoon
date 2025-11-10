@@ -8,12 +8,14 @@ module Server
   ) where
 
 import Servant
+import Data.Tagged (Tagged(..))
 import API
 import LLMPatterns
 import Data.Text (Text)
 import qualified Data.Text as T
 import Control.Monad.IO.Class (liftIO)
 import Data.Time.Clock (nominalDiffTimeToSeconds)
+import Network.Wai (Application)
 import Network.Wai.Handler.Warp (run)
 import Network.Wai.Application.Static (defaultFileServerSettings, staticApp)
 import WaiAppStatic.Types (ssIndices, ssMaxAge, unsafeToPiece, MaxAge(..))
@@ -30,6 +32,7 @@ server = executeHandler
     :<|> wsHandler
     :<|> serveStatic
   where
+    serveStatic :: Tagged Handler Application
     serveStatic = Tagged $ staticApp settings
       where
         settings = (defaultFileServerSettings "static")
