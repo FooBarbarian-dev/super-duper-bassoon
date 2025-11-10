@@ -14,10 +14,11 @@ import qualified Data.Text as T
 import Control.Monad.IO.Class (liftIO)
 import Data.Time.Clock (nominalDiffTimeToSeconds)
 import Network.Wai.Handler.Warp (run)
-import Network.Wai.Application.Static (staticApp, defaultFileServerSettings)
+import Network.Wai.Application.Static (defaultFileServerSettings, serveDirectoryWith)
 import WaiAppStatic.Types (ssIndices, ssMaxAge, unsafeToPiece, MaxAge(..))
 import Network.WebSockets (Connection, receiveData, sendTextData, sendClose)
 import Data.Aeson (encode, decode, object, (.=))
+import Data.Traversable (for)
 
 -- | Server implementation using more idiomatic handler composition
 server :: Server API
@@ -34,31 +35,29 @@ server = executeHandler
           }
 
 -- | Execute a single pattern
--- More idiomatic: proper error handling, clean code flow
+-- More idiomatic: uses traverse and ExceptT-style error handling
 executeHandler :: ExecuteRequest -> Handler ExecuteResponse
 executeHandler ExecuteRequest{..} = liftIO $ do
-  -- Build agents from configuration
-  agentResults <- mapM buildAgentIO erAgents
+  -- Build agents using traverse (combines mapM + sequence idiomatically)
+  agentResults <- traverse buildAgentIO erAgents
 
-  case sequence agentResults of
+  case agentResults of
     Left err -> pure $ errorResponse err
     Right agents -> do
       -- Create orchestrator and execute
       let orchestrator = withPattern erPattern (new agents)
       result <- execute orchestrator erInput
 
-      case result of
-        Left err -> pure $ errorResponse err
-        Right pr -> pure $ successResponse pr
+      pure $ either errorResponse successResponse result
 
 -- | Compare all patterns
--- More idiomatic: uses traverse for effect composition
+-- More idiomatic: uses traverse and for with proper error handling
 compareHandler :: CompareRequest -> Handler CompareResponse
 compareHandler CompareRequest{..} = liftIO $ do
-  -- Build agents
-  agentResults <- mapM buildAgentIO crAgents
+  -- Build agents using traverse
+  agentResults <- traverse buildAgentIO crAgents
 
-  case sequence agentResults of
+  case agentResults of
     Left err -> pure $ CompareResponse [("error", errorResponse err)]
     Right agents -> do
       -- Define all patterns to compare
@@ -72,34 +71,30 @@ compareHandler CompareRequest{..} = liftIO $ do
             , ("Magentic (10 iterations)", Magentic 10)
             ]
 
-      -- Execute each pattern
-      results <- mapM (executePattern agents) patterns
+      -- Execute each pattern using for (flipped traverse)
+      results <- for patterns $ executePattern agents
       pure $ CompareResponse results
   where
+    executePattern :: [Agent] -> (T.Text, Pattern) -> IO (T.Text, ExecuteResponse)
     executePattern agents (name, pattern) = do
       let orchestrator = withPattern pattern (new agents)
       result <- execute orchestrator crInput
-
-      let response = case result of
-            Left err -> errorResponse err
-            Right pr -> successResponse pr
-
-      pure (name, response)
+      pure (name, either errorResponse successResponse result)
 
 -- | WebSocket handler for real-time execution
--- More idiomatic: explicit connection handling
+-- More idiomatic: uses traverse and proper functional composition
 wsHandler :: Connection -> Handler ()
 wsHandler conn = liftIO $ do
   -- Receive request
   msg <- receiveData conn
 
   case decode msg of
-    Nothing -> sendClose conn ("Invalid request" :: Text)
-    Just req@ExecuteRequest{..} -> do
-      -- Build agents
-      agentResults <- mapM buildAgentIO erAgents
+    Nothing -> sendClose conn ("Invalid request" :: T.Text)
+    Just ExecuteRequest{..} -> do
+      -- Build agents using traverse
+      agentResults <- traverse buildAgentIO erAgents
 
-      case sequence agentResults of
+      case agentResults of
         Left err -> sendTextData conn $ encode $ errorResponse err
         Right agents -> do
           -- Execute and stream events
@@ -110,12 +105,12 @@ wsHandler conn = liftIO $ do
             Left err ->
               sendTextData conn $ encode $ errorResponse err
             Right pr -> do
-              -- Send trace events one by one
-              mapM_ (sendTraceEvent conn) (prTrace pr)
+              -- Send trace events one by one with traverse_
+              traverse_ (sendTraceEvent conn) (prTrace pr)
 
               -- Send final result
               sendTextData conn $ encode $ object
-                [ "type" .= ("complete" :: Text)
+                [ "type" .= ("complete" :: T.Text)
                 , "output" .= prOutput pr
                 , "duration" .= (realToFrac $ nominalDiffTimeToSeconds $ prDuration pr :: Double)
                 ]
