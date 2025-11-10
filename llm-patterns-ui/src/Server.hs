@@ -30,7 +30,7 @@ server = executeHandler
     :<|> wsHandler
     :<|> serveStatic
   where
-    serveStatic = staticApp settings
+    serveStatic = Tagged $ staticApp settings
       where
         settings = (defaultFileServerSettings "static")
           { ssIndices = [unsafeToPiece "index.html"]
