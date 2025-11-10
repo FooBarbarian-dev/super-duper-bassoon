@@ -10,6 +10,7 @@ module Server
 import Servant
 import API
 import LLMPatterns
+import Data.Text (Text)
 import qualified Data.Text as T
 import Control.Monad.IO.Class (liftIO)
 import Data.Time.Clock (nominalDiffTimeToSeconds)
