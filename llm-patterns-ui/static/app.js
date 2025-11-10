@@ -658,18 +658,27 @@ function generateMagenticDAG(agents) {
 
 // Execute All Patterns
 async function executeAllPatterns() {
+  console.log('='.repeat(60));
+  console.log('EXECUTE ALL PATTERNS - START');
+  console.log('='.repeat(60));
+
   const rootPrompt = document.getElementById('root-prompt').value.trim();
 
   if (!rootPrompt) {
+    console.warn('No root prompt provided');
     showError('Please enter a root prompt');
     return;
   }
+
+  console.log('Root prompt:', rootPrompt);
+  console.log('Patterns to execute:', Object.keys(state.patterns));
 
   // Disable execute button
   const executeBtn = document.getElementById('execute-all');
   executeBtn.disabled = true;
 
   // Clear previous results
+  console.log('Clearing previous results...');
   Object.keys(state.patterns).forEach(pattern => {
     state.patterns[pattern].logs = [];
     state.patterns[pattern].result = null;
@@ -679,78 +688,128 @@ async function executeAllPatterns() {
   });
 
   try {
+    console.log('Starting parallel execution of all patterns...');
+
     // Execute all patterns in parallel
     const promises = Object.keys(state.patterns).map(async (pattern) => {
+      console.log(`[${pattern}] Marking as running...`);
       updatePatternStatus(pattern, 'running');
 
       try {
         const result = await executePattern(pattern, rootPrompt);
+        console.log(`[${pattern}] ✅ Success`);
         updatePatternStatus(pattern, 'complete');
         setResult(pattern, result);
       } catch (error) {
-        console.error(`Pattern ${pattern} failed:`, error);
+        console.error(`[${pattern}] ❌ Failed:`, error);
         updatePatternStatus(pattern, 'error');
         setResult(pattern, { error: error.message });
       }
     });
 
     await Promise.all(promises);
+    console.log('All patterns completed');
   } catch (error) {
-    console.error('Execution failed:', error);
+    console.error('Fatal error during execution:', error);
     showError('Execution failed: ' + error.message);
   } finally {
     executeBtn.disabled = false;
+    console.log('='.repeat(60));
+    console.log('EXECUTE ALL PATTERNS - END');
+    console.log('='.repeat(60));
   }
 }
 
 // Execute Individual Pattern
 async function executePattern(patternName, input) {
+  console.log(`[${patternName}] Starting execution...`);
   const pattern = state.patterns[patternName];
 
-  // Build request based on pattern type
-  let requestBody = {
-    crAgents: pattern.agents,
-    crInput: input
-  };
-
-  // Add pattern-specific configuration
+  // Map pattern name to backend Pattern type
+  let patternType;
   switch (patternName) {
+    case 'sequential':
+      patternType = 'Sequential';
+      console.log(`[${patternName}] Pattern type: Sequential`);
+      break;
     case 'concurrent':
-      requestBody.crAggregation = pattern.aggregation;
+      const aggMethod = pattern.aggregation.charAt(0).toUpperCase() + pattern.aggregation.slice(1);
+      patternType = { Concurrent: aggMethod };
+      console.log(`[${patternName}] Pattern type: Concurrent ${aggMethod}`);
       break;
     case 'groupchat':
-      requestBody.crRounds = pattern.rounds;
+      patternType = { GroupChat: pattern.rounds };
+      console.log(`[${patternName}] Pattern type: GroupChat with ${pattern.rounds} rounds`);
       break;
     case 'handoff':
-      requestBody.crMaxHops = pattern.maxHops;
+      patternType = { Handoff: pattern.maxHops };
+      console.log(`[${patternName}] Pattern type: Handoff with max ${pattern.maxHops} hops`);
       break;
     case 'magentic':
-      requestBody.crMaxIterations = pattern.maxIterations;
+      patternType = { Magentic: pattern.maxIterations };
+      console.log(`[${patternName}] Pattern type: Magentic with max ${pattern.maxIterations} iterations`);
       break;
+    default:
+      throw new Error(`Unknown pattern: ${patternName}`);
   }
 
-  addLog(patternName, `Starting ${patternName} pattern execution...`);
+  // Build request body for /api/execute endpoint
+  const requestBody = {
+    erAgents: pattern.agents,
+    erPattern: patternType,
+    erInput: input
+  };
 
-  const response = await fetch(`/api/${patternName}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(requestBody)
-  });
+  console.log(`[${patternName}] Request body:`, JSON.stringify(requestBody, null, 2));
+  addLog(patternName, `📤 Sending request to backend with ${pattern.agents.length} agent(s)...`);
 
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-  }
-
-  const result = await response.json();
-
-  // Process trace events
-  if (result.exTrace) {
-    result.exTrace.forEach(event => {
-      addLog(patternName, formatEvent(event));
+  try {
+    const response = await fetch('/api/execute', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody)
     });
-  }
 
-  return result;
+    console.log(`[${patternName}] Response status: ${response.status} ${response.statusText}`);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[${patternName}] Error response:`, errorText);
+      addLog(patternName, `❌ HTTP ${response.status}: ${response.statusText}`);
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    console.log(`[${patternName}] Result received:`, result);
+
+    // Check for backend error
+    if (result.exError) {
+      console.error(`[${patternName}] Backend error:`, result.exError);
+      addLog(patternName, `❌ Backend error: ${result.exError}`);
+      throw new Error(result.exError);
+    }
+
+    addLog(patternName, `✅ Execution completed in ${result.exDuration.toFixed(2)}s`);
+
+    // Process trace events
+    if (result.exTrace && result.exTrace.length > 0) {
+      console.log(`[${patternName}] Processing ${result.exTrace.length} trace events`);
+      addLog(patternName, `📊 Processing ${result.exTrace.length} trace events...`);
+      result.exTrace.forEach((event, idx) => {
+        console.log(`[${patternName}] Trace event ${idx + 1}:`, event);
+        addLog(patternName, formatEvent(event));
+      });
+    } else {
+      console.log(`[${patternName}] No trace events`);
+      addLog(patternName, `ℹ️ No trace events generated`);
+    }
+
+    return result;
+  } catch (error) {
+    console.error(`[${patternName}] Execution failed:`, error);
+    addLog(patternName, `❌ Execution failed: ${error.message}`);
+    throw error;
+  }
 }
 
 // Update Pattern Status
