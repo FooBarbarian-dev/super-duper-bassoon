@@ -82,7 +82,23 @@ deriving instance Eq Pattern
 instance FromJSON Pattern where
     parseJSON = \case
         String "Sequential" -> pure Sequential
-        v -> fail $ "Unknown pattern: " ++ show v
+        Object v -> do
+            patternType <- v .: "type"
+            case patternType :: Text of
+                "Concurrent" -> do
+                    strategy <- v .: "strategy"
+                    pure $ Concurrent strategy
+                "GroupChat" -> do
+                    maxRounds <- v .: "maxRounds"
+                    pure $ GroupChat maxRounds
+                "Handoff" -> do
+                    maxHops <- v .: "maxHops"
+                    pure $ Handoff maxHops
+                "Magentic" -> do
+                    maxIterations <- v .: "maxIterations"
+                    pure $ Magentic maxIterations
+                _ -> fail $ "Unknown pattern type: " ++ T.unpack patternType
+        v -> fail $ "Invalid pattern format: " ++ show v
 
 instance ToJSON Pattern where
     toJSON Sequential = "Sequential"

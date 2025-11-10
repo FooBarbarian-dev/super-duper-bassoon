@@ -1,6 +1,13 @@
 // LLM Orchestration Patterns UI - 5 Tab Comparison
 // ================================================
 
+// Provider Models Configuration
+const providerModels = {
+  ollama: ['llama3.2', 'llama3.1', 'mistral', 'codellama', 'phi3'],
+  openai: ['gpt-4', 'gpt-4-turbo', 'gpt-3.5-turbo'],
+  claude: ['claude-3-5-sonnet-20241022', 'claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307']
+};
+
 // Global State Management
 const state = {
   currentPattern: 'sequential',
@@ -173,7 +180,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   initializeState();
   initializeEventListeners();
-  initializeWebSocket();
+  // WebSocket not currently used - remove connection attempt
+  // initializeWebSocket();
+  setWebSocketStatus('unavailable');
   renderAllAgents();
   renderAllDAGs();
 
@@ -243,7 +252,30 @@ function initializeEventListeners() {
   }
 }
 
-// WebSocket Initialization
+// WebSocket Status Management
+function setWebSocketStatus(status) {
+  const wsStatus = document.getElementById('ws-status');
+  const wsText = wsStatus.querySelector('.ws-text');
+
+  wsStatus.classList.remove('connected', 'connecting');
+
+  switch (status) {
+    case 'connected':
+      wsStatus.classList.add('connected');
+      wsText.textContent = 'Connected';
+      break;
+    case 'connecting':
+      wsStatus.classList.add('connecting');
+      wsText.textContent = 'Connecting...';
+      break;
+    case 'unavailable':
+    default:
+      wsText.textContent = 'HTTP Only';
+      break;
+  }
+}
+
+// WebSocket Initialization (currently disabled)
 function initializeWebSocket() {
   const wsStatus = document.getElementById('ws-status');
   const wsText = wsStatus.querySelector('.ws-text');
@@ -402,6 +434,12 @@ function createAgentCard(pattern, agent, index) {
   const card = document.createElement('div');
   card.className = 'agent-card';
 
+  // Generate model options based on provider
+  const modelOptions = providerModels[agent.acProvider] || [];
+  const modelOptionsHTML = modelOptions.map(m =>
+    `<option value="${m}" ${agent.acModel === m ? 'selected' : ''}>${m}</option>`
+  ).join('');
+
   card.innerHTML = `
     <div class="agent-card-header">
       <span class="agent-card-title">Agent ${index + 1}</span>
@@ -415,14 +453,17 @@ function createAgentCard(pattern, agent, index) {
     </div>
     <div class="agent-field">
       <label>Provider</label>
-      <select data-field="acProvider" data-pattern="${pattern}" data-index="${index}">
+      <select class="provider-select" data-field="acProvider" data-pattern="${pattern}" data-index="${index}">
         <option value="ollama" ${agent.acProvider === 'ollama' ? 'selected' : ''}>Ollama</option>
         <option value="openai" ${agent.acProvider === 'openai' ? 'selected' : ''}>OpenAI</option>
+        <option value="claude" ${agent.acProvider === 'claude' ? 'selected' : ''}>Claude</option>
       </select>
     </div>
     <div class="agent-field">
       <label>Model</label>
-      <input type="text" value="${agent.acModel}" data-field="acModel" data-pattern="${pattern}" data-index="${index}">
+      <select class="model-select" data-field="acModel" data-pattern="${pattern}" data-index="${index}">
+        ${modelOptionsHTML}
+      </select>
     </div>
     <div class="agent-field">
       <label>System Prompt</label>
@@ -430,14 +471,38 @@ function createAgentCard(pattern, agent, index) {
     </div>
   `;
 
-  // Event listeners for agent card
+  // Event listener for provider change (updates model dropdown)
+  const providerSelect = card.querySelector('.provider-select');
+  providerSelect.addEventListener('change', (e) => {
+    const newProvider = e.target.value;
+    const pattern = e.target.dataset.pattern;
+    const index = parseInt(e.target.dataset.index);
+
+    // Update agent provider
+    updateAgent(pattern, index, 'acProvider', newProvider);
+
+    // Update model dropdown options
+    const modelSelect = card.querySelector('.model-select');
+    const newModels = providerModels[newProvider] || [];
+    modelSelect.innerHTML = newModels.map(m => `<option value="${m}">${m}</option>`).join('');
+
+    // Set first model as default
+    if (newModels.length > 0) {
+      modelSelect.value = newModels[0];
+      updateAgent(pattern, index, 'acModel', newModels[0]);
+    }
+  });
+
+  // Event listeners for other fields
   card.querySelectorAll('input, select, textarea').forEach(input => {
-    input.addEventListener('change', (e) => {
-      const field = e.target.dataset.field;
-      const pattern = e.target.dataset.pattern;
-      const index = parseInt(e.target.dataset.index);
-      updateAgent(pattern, index, field, e.target.value);
-    });
+    if (!input.classList.contains('provider-select')) {  // Provider already handled above
+      input.addEventListener('change', (e) => {
+        const field = e.target.dataset.field;
+        const pattern = e.target.dataset.pattern;
+        const index = parseInt(e.target.dataset.index);
+        updateAgent(pattern, index, field, e.target.value);
+      });
+    }
   });
 
   const removeBtn = card.querySelector('.btn-remove-agent');
@@ -734,19 +799,19 @@ async function executePattern(patternName, input) {
       break;
     case 'concurrent':
       const aggMethod = pattern.aggregation.charAt(0).toUpperCase() + pattern.aggregation.slice(1);
-      patternType = { Concurrent: aggMethod };
+      patternType = { type: 'Concurrent', strategy: aggMethod };
       console.log(`[${patternName}] Pattern type: Concurrent ${aggMethod}`);
       break;
     case 'groupchat':
-      patternType = { GroupChat: pattern.rounds };
+      patternType = { type: 'GroupChat', maxRounds: pattern.rounds };
       console.log(`[${patternName}] Pattern type: GroupChat with ${pattern.rounds} rounds`);
       break;
     case 'handoff':
-      patternType = { Handoff: pattern.maxHops };
+      patternType = { type: 'Handoff', maxHops: pattern.maxHops };
       console.log(`[${patternName}] Pattern type: Handoff with max ${pattern.maxHops} hops`);
       break;
     case 'magentic':
-      patternType = { Magentic: pattern.maxIterations };
+      patternType = { type: 'Magentic', maxIterations: pattern.maxIterations };
       console.log(`[${patternName}] Pattern type: Magentic with max ${pattern.maxIterations} iterations`);
       break;
     default:

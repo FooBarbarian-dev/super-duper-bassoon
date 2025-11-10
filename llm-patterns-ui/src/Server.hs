@@ -13,16 +13,20 @@ import API
 import LLMPatterns
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import Control.Monad.IO.Class (liftIO)
-import Data.Time.Clock (nominalDiffTimeToSeconds)
+import Data.Time.Clock (nominalDiffTimeToSeconds, getCurrentTime, diffUTCTime)
 import Network.Wai.Handler.Warp (run)
 import Network.Wai.Application.Static (defaultFileServerSettings)
 import WaiAppStatic.Types (ssIndices, ssMaxAge, unsafeToPiece, MaxAge(..))
 import Network.WebSockets (Connection, receiveData, sendTextData, sendClose)
 import Data.Aeson (encode, decode, object, (.=))
+import qualified Data.Aeson as JSON
 import Data.Traversable (for)
 import Data.Foldable (traverse_)
 import Data.Either (partitionEithers)
+import System.Log.FastLogger
+import qualified Data.ByteString.Char8 as BS
 
 -- | Server implementation using more idiomatic handler composition
 server :: Server API
@@ -42,20 +46,49 @@ server = executeHandler
 -- More idiomatic: uses traverse and ExceptT-style error handling
 executeHandler :: ExecuteRequest -> Handler ExecuteResponse
 executeHandler ExecuteRequest{..} = liftIO $ do
+  -- Initialize logger
+  timeCache <- newTimeCache simpleTimeFormat
+  (logger, cleanup) <- newTimedFastLogger timeCache (LogStdout defaultBufSize)
+
+  -- Log incoming request
+  logger $ toLogStr $ "📥 Execute request received: " <> show erPattern <> " with " <> show (length erAgents) <> " agent(s)\n"
+  logger $ toLogStr $ "   Request body: " <> BS.unpack (JSON.encode (object ["pattern" .= erPattern, "agents" .= (length erAgents), "input_length" .= T.length erInput])) <> "\n"
+
   -- Build agents using traverse (combines mapM + sequence idiomatically)
+  startTime <- getCurrentTime
+  logger $ toLogStr "🔧 Building agents...\n"
   agentResults <- traverse buildAgentIO erAgents
 
   -- Partition Either values to separate errors from successes
   let (errors, agents) = partitionEithers agentResults
 
-  case errors of
-    (err:_) -> pure $ errorResponse err  -- Return first error
+  result <- case errors of
+    (err:_) -> do
+      logger $ toLogStr $ "❌ Agent build error: " <> T.unpack (errorToText err) <> "\n"
+      pure $ errorResponse err  -- Return first error
     [] -> do
+      logger $ toLogStr $ "✅ Built " <> show (length agents) <> " agent(s) successfully\n"
+      logger $ toLogStr $ "🚀 Executing pattern: " <> show erPattern <> "\n"
+
       -- Create orchestrator and execute
       let orchestrator = withPattern erPattern (new agents)
-      result <- execute orchestrator erInput
+      execResult <- execute orchestrator erInput
 
-      pure $ either errorResponse successResponse result
+      endTime <- getCurrentTime
+      let duration = realToFrac $ nominalDiffTimeToSeconds (endTime `diffUTCTime` startTime) :: Double
+
+      case execResult of
+        Left err -> do
+          logger $ toLogStr $ "❌ Pattern execution failed: " <> T.unpack (errorToText err) <> "\n"
+          pure $ errorResponse err
+        Right pr -> do
+          logger $ toLogStr $ "✅ Pattern execution completed in " <> show duration <> "s\n"
+          logger $ toLogStr $ "   Output length: " <> show (T.length (prOutput pr)) <> " chars\n"
+          logger $ toLogStr $ "   Trace events: " <> show (length (prTrace pr)) <> "\n"
+          pure $ successResponse pr
+
+  cleanup
+  pure result
 
 -- | Compare all patterns
 -- More idiomatic: uses traverse and for with proper error handling
