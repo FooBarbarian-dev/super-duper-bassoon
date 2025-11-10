@@ -494,106 +494,165 @@ function renderDAG(pattern) {
 
 // DAG Generation Functions
 function generateSequentialDAG(agents) {
-  let code = 'graph TD\n';
+  let code = 'flowchart TD\n';
 
   if (agents.length === 0) return code;
 
-  code += `  Start([Input]) --> A0["${agents[0]}"]\n`;
+  code += `  Start([Input])\n`;
 
-  for (let i = 0; i < agents.length - 1; i++) {
-    code += `  A${i} --> A${i + 1}["${agents[i + 1]}"]\n`;
+  for (let i = 0; i < agents.length; i++) {
+    code += `  A${i}["${agents[i]}"]\n`;
   }
 
-  code += `  A${agents.length - 1} --> End([Output])\n`;
+  code += `  End([Output])\n\n`;
+
+  code += `  Start --> A0\n`;
+
+  for (let i = 0; i < agents.length - 1; i++) {
+    code += `  A${i} --> A${i + 1}\n`;
+  }
+
+  code += `  A${agents.length - 1} --> End\n`;
   return code;
 }
 
 function generateConcurrentDAG(agents, aggregation) {
-  let code = 'graph TD\n';
+  let code = 'flowchart TD\n';
 
   if (agents.length === 0) return code;
 
   const aggMethod = aggregation.charAt(0).toUpperCase() + aggregation.slice(1);
 
-  code += '  Start([Input]) --> Broadcast{Broadcast}\n';
+  // Define nodes
+  code += '  Start([Input])\n';
+  code += '  Broadcast{Broadcast}\n';
 
   agents.forEach((agent, i) => {
-    code += `  Broadcast --> A${i}["${agent}"]\n`;
+    code += `  A${i}["${agent}"]\n`;
+  });
+
+  code += `  Aggregate["${aggMethod}"]\n`;
+  code += '  End([Output])\n\n';
+
+  // Define connections
+  code += '  Start --> Broadcast\n';
+
+  agents.forEach((agent, i) => {
+    code += `  Broadcast --> A${i}\n`;
   });
 
   agents.forEach((agent, i) => {
-    code += `  A${i} --> Aggregate["${aggMethod}"]\n`;
+    code += `  A${i} --> Aggregate\n`;
   });
 
-  code += '  Aggregate --> End([Output])\n';
+  code += '  Aggregate --> End\n';
   return code;
 }
 
 function generateGroupChatDAG(agents, rounds) {
-  let code = 'graph TD\n';
+  let code = 'flowchart TD\n';
 
   if (agents.length === 0) return code;
 
   const maxRoundsToShow = Math.min(rounds, 3);
 
-  code += '  Start([Input]) --> Round1["Round 1"]\n';
+  // Define nodes
+  code += '  Start([Input])\n';
+
+  for (let r = 1; r <= maxRoundsToShow; r++) {
+    code += `  Round${r}["Round ${r}"]\n`;
+    agents.forEach((agent, i) => {
+      code += `  R${r}A${i}["${agent}"]\n`;
+    });
+  }
+
+  if (rounds > 3) {
+    code += `  More["... ${rounds - 3} more"]\n`;
+  }
+
+  code += '  Consensus["Consensus"]\n';
+  code += '  End([Output])\n\n';
+
+  // Define connections
+  code += '  Start --> Round1\n';
 
   for (let r = 1; r <= maxRoundsToShow; r++) {
     agents.forEach((agent, i) => {
-      code += `  Round${r} --> R${r}A${i}["${agent}"]\n`;
+      code += `  Round${r} --> R${r}A${i}\n`;
     });
 
     if (r < maxRoundsToShow) {
       agents.forEach((agent, i) => {
-        code += `  R${r}A${i} --> Round${r + 1}["Round ${r + 1}"]\n`;
+        code += `  R${r}A${i} --> Round${r + 1}\n`;
       });
     }
   }
 
   if (rounds > 3) {
-    code += `  R3A0 -.-> More["... ${rounds - 3} more rounds"]\n`;
-    code += '  More -.-> Consensus["Consensus"]\n';
+    code += `  R3A0 -.-> More\n`;
+    code += '  More -.-> Consensus\n';
   } else {
     agents.forEach((agent, i) => {
-      code += `  R${maxRoundsToShow}A${i} --> Consensus["Consensus"]\n`;
+      code += `  R${maxRoundsToShow}A${i} --> Consensus\n`;
     });
   }
 
-  code += '  Consensus --> End([Output])\n';
+  code += '  Consensus --> End\n';
   return code;
 }
 
 function generateHandoffDAG(agents) {
-  let code = 'graph TD\n';
+  let code = 'flowchart TD\n';
 
   if (agents.length === 0) return code;
 
-  code += `  Start([Input]) --> A0["${agents[0]}"]\n`;
+  // Define nodes
+  code += '  Start([Input])\n';
 
-  for (let i = 0; i < agents.length - 1; i++) {
-    code += `  A${i} -.->|handoff| A${i + 1}["${agents[i + 1]}"]\n`;
+  for (let i = 0; i < agents.length; i++) {
+    code += `  A${i}["${agents[i]}"]\n`;
   }
 
-  code += `  A${agents.length - 1} --> End([Output])\n`;
+  code += '  End([Output])\n\n';
+
+  // Define connections
+  code += '  Start --> A0\n';
+
+  for (let i = 0; i < agents.length - 1; i++) {
+    code += `  A${i} -.->|handoff| A${i + 1}\n`;
+  }
+
+  code += `  A${agents.length - 1} --> End\n`;
   return code;
 }
 
 function generateMagenticDAG(agents) {
-  let code = 'graph TD\n';
+  let code = 'flowchart TD\n';
 
   if (agents.length === 0) return code;
 
-  code += `  Start([Input]) --> Manager["${agents[0]}"]\n`;
+  // Define nodes
+  code += '  Start([Input])\n';
+  code += `  Manager["${agents[0]}"]\n`;
 
   for (let i = 1; i < agents.length; i++) {
-    code += `  Manager -->|task| W${i}["${agents[i]}"]\n`;
+    code += `  W${i}["${agents[i]}"]\n`;
+  }
+
+  code += '  End([Output])\n\n';
+
+  // Define connections
+  code += '  Start --> Manager\n';
+
+  for (let i = 1; i < agents.length; i++) {
+    code += `  Manager -->|task| W${i}\n`;
   }
 
   for (let i = 1; i < agents.length; i++) {
     code += `  W${i} -->|result| Manager\n`;
   }
 
-  code += '  Manager --> End([Output])\n';
+  code += '  Manager --> End\n';
   return code;
 }
 
