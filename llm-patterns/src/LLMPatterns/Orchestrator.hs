@@ -2,7 +2,7 @@
 {-# LANGUAGE LambdaCase #-}
 
 module LLMPatterns.Orchestrator
-  ( Orchestrator
+  ( Orchestrator(..)
   , new
   , withPattern
   , execute

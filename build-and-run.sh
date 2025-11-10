@@ -37,7 +37,7 @@ echo ""
 
 # Step 4: Run tests
 echo -e "${YELLOW}[4/4] Running tests...${NC}"
-if cabal test; then
+if cabal test all; then
     echo -e "${GREEN}✓ All tests passed${NC}"
 else
     echo -e "${RED}✗ Tests failed${NC}"

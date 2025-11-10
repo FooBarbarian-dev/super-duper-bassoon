@@ -4,7 +4,6 @@ module LLMPatterns.Patterns.SequentialSpec (spec) where
 
 import Test.Hspec
 import LLMPatterns.Types
-import LLMPatterns.Agent
 import LLMPatterns.Patterns.Sequential
 
 spec :: Spec

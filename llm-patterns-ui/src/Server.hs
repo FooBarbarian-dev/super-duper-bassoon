@@ -8,7 +8,7 @@ module Server
   ) where
 
 import Servant
-import Servant.Utils.StaticFiles (serveDirectoryWith)
+import Servant.Server.StaticFiles (serveDirectoryWith)
 import API
 import LLMPatterns
 import Data.Text (Text)
