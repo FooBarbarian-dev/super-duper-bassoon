@@ -3,80 +3,63 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LLM Orchestration Patterns</title>
+  <title>LLM Orchestration Patterns Comparison</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div id="app">
     <header>
       <h1>🤖 LLM Orchestration Patterns</h1>
-      <p class="subtitle">Explore different agent coordination strategies in Haskell</p>
+      <p class="subtitle">Compare all agent coordination strategies in parallel</p>
     </header>
 
     <div class="container">
-      <!-- Agent Configuration Panel -->
-      <aside id="agent-panel" class="panel">
-        <div class="panel-header">
-          <h3>Agents</h3>
+      <!-- Agent Configuration -->
+      <section class="config-section">
+        <div class="section-header">
+          <h2>Agents Configuration</h2>
           <button id="add-agent" class="btn btn-primary">+ Add Agent</button>
         </div>
         <div id="agent-list" class="agent-list"></div>
-      </aside>
+      </section>
 
-      <!-- Main Execution Area -->
-      <main class="main-content">
-        <!-- Pattern Selection -->
-        <div class="panel">
-          <h3>Orchestration Pattern</h3>
-          <div class="pattern-selector">
-            <select id="pattern-type" class="select">
-              <option value="Sequential">Sequential</option>
-              <option value="Concurrent">Concurrent (Vote)</option>
-              <option value="GroupChat">Group Chat</option>
-              <option value="Handoff">Handoff</option>
-              <option value="Magentic">Magentic</option>
-            </select>
+      <!-- Input Prompt -->
+      <section class="config-section">
+        <h2>Input Prompt</h2>
+        <textarea id="user-input" class="input-prompt" placeholder="Enter your prompt here..." rows="4"></textarea>
+      </section>
 
-            <div id="pattern-description" class="pattern-description">
-              Select a pattern to see its description
-            </div>
-          </div>
+      <!-- Compare Button -->
+      <section class="action-section">
+        <button id="compare-all" class="btn btn-compare">
+          <span class="btn-icon">⚡</span>
+          Compare All Patterns
+        </button>
+        <div id="loading" class="loading" style="display: none;">
+          <div class="spinner"></div>
+          <span>Running all patterns in parallel...</span>
         </div>
+      </section>
 
-        <!-- Input Area -->
-        <div class="panel">
-          <h3>Input</h3>
-          <textarea
-            id="user-input"
-            class="textarea"
-            placeholder="Enter your prompt here...&#10;&#10;Example: Write a short article about the benefits of functional programming"
-            rows="6"
-          ></textarea>
+      <!-- DAG Visualization -->
+      <section id="dag-section" class="dag-section" style="display: none;">
+        <h2>Execution Flow</h2>
+        <div id="dag-container" class="dag-container"></div>
+      </section>
 
-          <div class="button-group">
-            <button id="execute" class="btn btn-primary btn-large">▶ Execute Pattern</button>
-            <button id="compare-all" class="btn btn-secondary btn-large">📊 Compare All Patterns</button>
-          </div>
+      <!-- Results Tabs -->
+      <section id="results-section" class="results-section" style="display: none;">
+        <h2>Pattern Results</h2>
+        <div class="tabs">
+          <div class="tab-headers" id="tab-headers"></div>
+          <div class="tab-contents" id="tab-contents"></div>
         </div>
+      </section>
 
-        <!-- Visualization -->
-        <div id="visualization-container" class="panel" style="display: none;">
-          <h3>Execution Trace</h3>
-          <div id="visualization" class="visualization"></div>
-        </div>
-
-        <!-- Results -->
-        <div id="results-container" class="panel" style="display: none;">
-          <h3>Results</h3>
-          <div id="results" class="results"></div>
-        </div>
-      </main>
+      <!-- Error Display -->
+      <div id="error-message" class="error-message" style="display: none;"></div>
     </div>
   </div>
-
-  <footer>
-    <p>Built with Haskell + Servant + langchain-hs</p>
-  </footer>
 
   <script src="app.js"></script>
 </body>

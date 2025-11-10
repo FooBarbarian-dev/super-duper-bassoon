@@ -1,34 +1,66 @@
-// LLM Orchestration Patterns UI - JavaScript
+// LLM Orchestration Patterns UI - Comparison Focus
 
-// Pattern descriptions
-const patternDescriptions = {
-  'Sequential': 'Agents process the input one after another, with each agent receiving the previous agent\'s output. Best for multi-step transformations.',
-  'Concurrent': 'All agents process the input simultaneously, then results are aggregated by voting. Best for getting consensus or multiple perspectives.',
-  'GroupChat': 'Agents take turns in a conversation until consensus is reached or max rounds completed. Best for collaborative problem-solving.',
-  'Handoff': 'Agents can hand off work to other specialized agents. Best for complex workflows requiring different expertise.',
-  'Magentic': 'A manager agent decomposes tasks and distributes them to worker agents. Best for hierarchical task decomposition.'
+// Pattern descriptions for DAG visualization
+const patternInfo = {
+  'Sequential': {
+    desc: 'Chain agents one after another',
+    color: '#00f0ff',
+    flow: (agents) => agents.map((a, i) => ({ from: i > 0 ? i-1 : null, to: i, label: a }))
+  },
+  'Concurrent (Vote)': {
+    desc: 'All agents vote on the result',
+    color: '#ff00ff',
+    flow: (agents) => agents.map((a, i) => ({ from: 'input', to: i, label: a, parallel: true }))
+  },
+  'Concurrent (Consensus)': {
+    desc: 'Agents reach consensus',
+    color: '#b537f2',
+    flow: (agents) => agents.map((a, i) => ({ from: 'input', to: i, label: a, parallel: true }))
+  },
+  'Concurrent (Combine)': {
+    desc: 'Combine all agent outputs',
+    color: '#39ff14',
+    flow: (agents) => agents.map((a, i) => ({ from: 'input', to: i, label: a, parallel: true }))
+  },
+  'Group Chat (5 rounds)': {
+    desc: 'Agents chat in rounds',
+    color: '#ffcc00',
+    flow: (agents) => agents.flatMap((a, i) => [
+      { from: i > 0 ? i-1 : 'input', to: i, label: a, round: true }
+    ])
+  },
+  'Handoff (10 hops)': {
+    desc: 'Dynamic agent routing',
+    color: '#ff6b6b',
+    flow: (agents) => [
+      { from: 'input', to: 0, label: agents[0] || 'Start' },
+      ...agents.slice(1).map((a, i) => ({ from: i, to: i+1, label: a, conditional: true }))
+    ]
+  },
+  'Magentic (10 iterations)': {
+    desc: 'Manager decomposes tasks',
+    color: '#4ecdc4',
+    flow: (agents) => [
+      { from: 'input', to: 0, label: agents[0] || 'Manager', manager: true },
+      ...agents.slice(1).map((a, i) => ({ from: 0, to: i+1, label: a, worker: true }))
+    ]
+  }
 };
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
   initializeEventListeners();
-  addInitialAgent();
-  updatePatternDescription();
+  // Start with 2 agents
+  addAgent();
+  addAgent();
 });
 
-// Event listeners
 function initializeEventListeners() {
   document.getElementById('add-agent').addEventListener('click', addAgent);
-  document.getElementById('execute').addEventListener('click', executePattern);
-  document.getElementById('compare-all').addEventListener('click', comparePatterns);
-  document.getElementById('pattern-type').addEventListener('change', updatePatternDescription);
+  document.getElementById('compare-all').addEventListener('click', compareAllPatterns);
 }
 
-// Agent management
-function addInitialAgent() {
-  addAgent();
-}
-
+// Agent Management
 function addAgent() {
   const agentList = document.getElementById('agent-list');
   const agentIndex = agentList.children.length;
@@ -36,14 +68,31 @@ function addAgent() {
   const card = document.createElement('div');
   card.className = 'agent-card';
   card.innerHTML = `
-    <button class="remove-agent" onclick="this.parentElement.remove()">×</button>
-    <input type="text" class="agent-id" placeholder="Agent ID" value="agent${agentIndex + 1}">
-    <select class="agent-provider">
-      <option value="ollama">Ollama</option>
-      <option value="openai">OpenAI</option>
-    </select>
-    <input type="text" class="agent-model" placeholder="Model name" value="llama3.2">
-    <textarea class="agent-prompt" placeholder="System prompt" rows="3">You are a helpful AI assistant.</textarea>
+    <div class="agent-header">
+      <span class="agent-number">Agent ${agentIndex + 1}</span>
+      ${agentIndex > 0 ? '<button class="remove-agent" onclick="this.closest(\'.agent-card\').remove()">×</button>' : ''}
+    </div>
+    <div class="agent-fields">
+      <div class="field">
+        <label>Agent ID</label>
+        <input type="text" class="agent-id" placeholder="agent${agentIndex + 1}" value="agent${agentIndex + 1}">
+      </div>
+      <div class="field">
+        <label>Provider</label>
+        <select class="agent-provider">
+          <option value="ollama">Ollama</option>
+          <option value="openai">OpenAI</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Model</label>
+        <input type="text" class="agent-model" placeholder="Model name" value="llama3.2">
+      </div>
+      <div class="field">
+        <label>System Prompt</label>
+        <textarea class="agent-prompt" placeholder="System prompt for this agent..." rows="3">You are a helpful AI assistant ${agentIndex > 0 ? `specializing in ${['analysis', 'synthesis', 'review', 'validation'][agentIndex % 4]}` : ''}.</textarea>
+      </div>
+    </div>
   `;
 
   agentList.appendChild(card);
@@ -59,57 +108,8 @@ function collectAgents() {
   }));
 }
 
-// Pattern description
-function updatePatternDescription() {
-  const pattern = document.getElementById('pattern-type').value;
-  const descEl = document.getElementById('pattern-description');
-  descEl.textContent = patternDescriptions[pattern] || 'Select a pattern';
-}
-
-// Execute single pattern
-async function executePattern() {
-  const agents = collectAgents();
-  const pattern = buildPatternObject();
-  const input = document.getElementById('user-input').value;
-
-  if (!input.trim()) {
-    showError('Please enter an input prompt');
-    return;
-  }
-
-  if (agents.length === 0) {
-    showError('Please add at least one agent');
-    return;
-  }
-
-  showLoading();
-
-  try {
-    const response = await fetch('/api/execute', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        erAgents: agents,
-        erPattern: pattern,
-        erInput: input
-      })
-    });
-
-    const result = await response.json();
-
-    if (result.exError) {
-      showError(result.exError);
-    } else {
-      displayResults(result);
-      visualizeExecution(result.exTrace, document.getElementById('pattern-type').value);
-    }
-  } catch (error) {
-    showError('Failed to execute pattern: ' + error.message);
-  }
-}
-
-// Compare all patterns
-async function comparePatterns() {
+// Compare All Patterns
+async function compareAllPatterns() {
   const agents = collectAgents();
   const input = document.getElementById('user-input').value;
 
@@ -123,7 +123,14 @@ async function comparePatterns() {
     return;
   }
 
-  showLoading();
+  // Hide any previous results
+  document.getElementById('results-section').style.display = 'none';
+  document.getElementById('dag-section').style.display = 'none';
+  document.getElementById('error-message').style.display = 'none';
+
+  // Show loading
+  document.getElementById('loading').style.display = 'flex';
+  document.getElementById('compare-all').disabled = true;
 
   try {
     const response = await fetch('/api/compare', {
@@ -135,167 +142,224 @@ async function comparePatterns() {
       })
     });
 
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
     const result = await response.json();
-    displayComparison(result.cmpResults);
+
+    // Display DAG visualization
+    displayDAG(agents);
+
+    // Display results in tabs
+    displayTabbedResults(result.cmpResults);
+
   } catch (error) {
     showError('Failed to compare patterns: ' + error.message);
+    console.error('Comparison error:', error);
+  } finally {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('compare-all').disabled = false;
   }
 }
 
-// Build pattern object based on selection
-function buildPatternObject() {
-  const patternType = document.getElementById('pattern-type').value;
+// Display DAG Visualization
+function displayDAG(agents) {
+  const dagSection = document.getElementById('dag-section');
+  const dagContainer = document.getElementById('dag-container');
 
-  switch (patternType) {
-    case 'Sequential':
-      return 'Sequential';
-    case 'Concurrent':
-      return { type: 'Concurrent', strategy: 'Vote' };
-    case 'GroupChat':
-      return { type: 'GroupChat', maxRounds: 5 };
-    case 'Handoff':
-      return { type: 'Handoff', maxHops: 10 };
-    case 'Magentic':
-      return { type: 'Magentic', maxIterations: 10 };
-    default:
-      return 'Sequential';
+  dagSection.style.display = 'block';
+  dagContainer.innerHTML = '';
+
+  const agentNames = agents.map(a => a.acId);
+
+  Object.entries(patternInfo).forEach(([patternName, info]) => {
+    const patternDiv = document.createElement('div');
+    patternDiv.className = 'dag-pattern';
+
+    const flow = info.flow(agentNames);
+    const dagHtml = createDAGVisualization(patternName, info, flow);
+
+    patternDiv.innerHTML = `
+      <h3 style="color: ${info.color}">${patternName}</h3>
+      <p class="pattern-desc">${info.desc}</p>
+      ${dagHtml}
+    `;
+
+    dagContainer.appendChild(patternDiv);
+  });
+}
+
+function createDAGVisualization(patternName, info, flow) {
+  let html = '<div class="dag-flow">';
+
+  if (flow.some(f => f.parallel)) {
+    // Parallel pattern
+    html += '<div class="dag-node dag-input">Input</div>';
+    html += '<div class="dag-parallel">';
+    flow.forEach((f, i) => {
+      html += `<div class="dag-branch">
+        <div class="dag-arrow">↓</div>
+        <div class="dag-node" style="border-color: ${info.color}">${f.label}</div>
+      </div>`;
+    });
+    html += '</div>';
+    html += '<div class="dag-convergence">↓</div>';
+    html += '<div class="dag-node dag-output">Aggregate</div>';
+  } else if (flow.some(f => f.round)) {
+    // Round-robin pattern
+    html += '<div class="dag-node dag-input">Input</div>';
+    flow.forEach((f, i) => {
+      html += `<div class="dag-arrow">${f.round ? '⟲' : '↓'}</div>`;
+      html += `<div class="dag-node" style="border-color: ${info.color}">${f.label}</div>`;
+    });
+    html += '<div class="dag-arrow">↓</div>';
+    html += '<div class="dag-node dag-output">Consensus</div>';
+  } else if (flow.some(f => f.manager)) {
+    // Hierarchical pattern
+    html += '<div class="dag-node dag-input">Input</div>';
+    html += '<div class="dag-arrow">↓</div>';
+    html += `<div class="dag-node dag-manager" style="border-color: ${info.color}">${flow[0].label}</div>`;
+    html += '<div class="dag-parallel">';
+    flow.slice(1).forEach(f => {
+      html += `<div class="dag-branch">
+        <div class="dag-arrow">↓</div>
+        <div class="dag-node dag-worker" style="border-color: ${info.color}">${f.label}</div>
+      </div>`;
+    });
+    html += '</div>';
+    html += '<div class="dag-convergence">↑</div>';
+    html += `<div class="dag-node dag-manager" style="border-color: ${info.color}">${flow[0].label}</div>`;
+  } else {
+    // Sequential or conditional pattern
+    html += '<div class="dag-node dag-input">Input</div>';
+    flow.forEach((f, i) => {
+      html += `<div class="dag-arrow">${f.conditional ? '⤷' : '↓'}</div>`;
+      html += `<div class="dag-node" style="border-color: ${info.color}">${f.label}</div>`;
+    });
+    html += '<div class="dag-arrow">↓</div>';
+    html += '<div class="dag-node dag-output">Output</div>';
   }
+
+  html += '</div>';
+  return html;
 }
 
-// Display functions
-function displayResults(result) {
-  const container = document.getElementById('results-container');
-  const resultsDiv = document.getElementById('results');
+// Display Results in Tabs
+function displayTabbedResults(results) {
+  const resultsSection = document.getElementById('results-section');
+  const tabHeaders = document.getElementById('tab-headers');
+  const tabContents = document.getElementById('tab-contents');
 
-  container.style.display = 'block';
-  resultsDiv.innerHTML = `
-    <div class="result-metadata">
-      <div class="metric">
-        <span>Duration:</span>
-        <span class="metric-value">${result.exDuration.toFixed(2)}s</span>
-      </div>
-      <div class="metric">
-        <span>Events:</span>
-        <span class="metric-value">${result.exTrace.length}</span>
-      </div>
-    </div>
-    <div class="result-output">
-      <h4>Final Output</h4>
-      <pre>${escapeHtml(result.exOutput)}</pre>
-    </div>
-  `;
-}
+  resultsSection.style.display = 'block';
+  tabHeaders.innerHTML = '';
+  tabContents.innerHTML = '';
 
-function visualizeExecution(trace, patternName) {
-  const container = document.getElementById('visualization-container');
-  const vizDiv = document.getElementById('visualization');
+  results.forEach(([patternName, result], index) => {
+    const isActive = index === 0;
 
-  container.style.display = 'block';
+    // Create tab header
+    const tabHeader = document.createElement('button');
+    tabHeader.className = `tab-header ${isActive ? 'active' : ''}`;
+    tabHeader.textContent = patternName;
+    tabHeader.style.borderBottomColor = patternInfo[patternName]?.color || '#00f0ff';
+    tabHeader.onclick = () => activateTab(index);
+    tabHeaders.appendChild(tabHeader);
 
-  const traceHTML = trace.map(event => {
-    const eventType = getEventType(event);
-    const eventClass = getEventClass(eventType);
-    return `<div class="trace-event ${eventClass}">${formatTraceEvent(event)}</div>`;
-  }).join('');
+    // Create tab content
+    const tabContent = document.createElement('div');
+    tabContent.className = `tab-content ${isActive ? 'active' : ''}`;
+    tabContent.id = `tab-${index}`;
 
-  vizDiv.innerHTML = `
-    <div><strong>${patternName} Pattern Execution</strong></div>
-    <div style="margin-top: 1rem;">${traceHTML}</div>
-  `;
-}
-
-function displayComparison(results) {
-  const container = document.getElementById('results-container');
-  const resultsDiv = document.getElementById('results');
-
-  container.style.display = 'block';
-
-  const gridHTML = results.map(([name, result]) => {
     if (result.exError) {
-      return `
-        <div class="comparison-column">
-          <h3>${name}</h3>
-          <div class="error-message">${result.exError}</div>
+      tabContent.innerHTML = `
+        <div class="error-result">
+          <h3>Error</h3>
+          <pre>${escapeHtml(result.exError)}</pre>
+        </div>
+      `;
+    } else {
+      tabContent.innerHTML = `
+        <div class="result-meta">
+          <div class="meta-item">
+            <span class="meta-label">Duration:</span>
+            <span class="meta-value">${result.exDuration.toFixed(3)}s</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Events:</span>
+            <span class="meta-value">${result.exTrace.length}</span>
+          </div>
+        </div>
+        <div class="result-output">
+          <h3>Final Output</h3>
+          <pre>${escapeHtml(result.exOutput)}</pre>
+        </div>
+        <div class="result-trace">
+          <h3>Execution Trace</h3>
+          <div class="trace-events">
+            ${result.exTrace.map(event => formatTraceEvent(event)).join('')}
+          </div>
         </div>
       `;
     }
 
-    const preview = result.exOutput.substring(0, 200);
-    return `
-      <div class="comparison-column">
-        <h3>${name}</h3>
-        <div class="result-preview">${escapeHtml(preview)}${result.exOutput.length > 200 ? '...' : ''}</div>
-        <div class="metrics">
-          ⏱️ ${result.exDuration.toFixed(2)}s |
-          📊 ${result.exTrace.length} events
-        </div>
-      </div>
-    `;
-  }).join('');
-
-  resultsDiv.innerHTML = `
-    <h3 style="margin-bottom: 1rem;">Pattern Comparison</h3>
-    <div class="comparison-grid">${gridHTML}</div>
-  `;
-
-  // Hide visualization when showing comparison
-  document.getElementById('visualization-container').style.display = 'none';
+    tabContents.appendChild(tabContent);
+  });
 }
 
-// Helper functions
-function getEventType(event) {
-  if (event.tag) return event.tag;
-  if (typeof event === 'object') {
-    if ('AgentStarted' in event) return 'AgentStarted';
-    if ('AgentCompleted' in event) return 'AgentCompleted';
-    if ('AgentFailed' in event) return 'AgentFailed';
-    if ('HandoffOccurred' in event) return 'HandoffOccurred';
-    if ('TaskCreated' in event) return 'TaskCreated';
-    if ('TaskCompleted' in event) return 'TaskCompleted';
-  }
-  return 'Unknown';
-}
+function activateTab(index) {
+  const headers = document.querySelectorAll('.tab-header');
+  const contents = document.querySelectorAll('.tab-content');
 
-function getEventClass(eventType) {
-  if (eventType.includes('Started') || eventType.includes('Created')) return 'started';
-  if (eventType.includes('Completed')) return 'completed';
-  if (eventType.includes('Failed')) return 'failed';
-  return '';
+  headers.forEach((h, i) => h.classList.toggle('active', i === index));
+  contents.forEach((c, i) => c.classList.toggle('active', i === index));
 }
 
 function formatTraceEvent(event) {
-  const type = getEventType(event);
+  let text = '';
+  let className = 'trace-event';
 
-  switch (type) {
-    case 'AgentStarted':
-      return `🟦 Agent started: ${event.AgentStarted?.unAgentId || event[0] || 'unknown'}`;
-    case 'AgentCompleted':
-      return `✅ Agent completed: ${event.AgentCompleted?.[0]?.unAgentId || 'unknown'}`;
-    case 'AgentFailed':
-      return `❌ Agent failed: ${event.AgentFailed?.[0]?.unAgentId || 'unknown'}`;
-    case 'HandoffOccurred':
-      return `🔄 Handoff: ${event.HandoffOccurred?.[0]?.unAgentId || '?'} → ${event.HandoffOccurred?.[1]?.unAgentId || '?'}`;
-    case 'TaskCreated':
-      return `📝 Task created: ${event.TaskCreated || 'unknown'}`;
-    case 'TaskCompleted':
-      return `✓ Task completed: ${event.TaskCompleted || 'unknown'}`;
-    default:
-      return JSON.stringify(event);
+  if (typeof event === 'string') {
+    text = event;
+  } else if (event.AgentStarted) {
+    text = `▶ Agent ${event.AgentStarted} started`;
+    className += ' event-start';
+  } else if (event.AgentCompleted) {
+    text = `✓ Agent ${event.AgentCompleted[0]} completed`;
+    className += ' event-complete';
+  } else if (event.AgentFailed) {
+    text = `✗ Agent ${event.AgentFailed[0]} failed: ${event.AgentFailed[1]}`;
+    className += ' event-error';
+  } else if (event.HandoffOccurred) {
+    text = `⤷ Handoff: ${event.HandoffOccurred[0]} → ${event.HandoffOccurred[1]}`;
+    className += ' event-handoff';
+  } else if (event.TaskCreated) {
+    text = `+ Task created: ${event.TaskCreated}`;
+    className += ' event-task';
+  } else if (event.TaskCompleted) {
+    text = `✓ Task completed: ${event.TaskCompleted}`;
+    className += ' event-task-done';
+  } else if (event.RoundStarted) {
+    text = `🔄 Round ${event.RoundStarted} started`;
+    className += ' event-round';
+  } else if (event.RoundCompleted) {
+    text = `✓ Round ${event.RoundCompleted} completed`;
+    className += ' event-round-done';
+  } else {
+    text = JSON.stringify(event);
   }
+
+  return `<div class="${className}">${escapeHtml(text)}</div>`;
 }
 
-function showLoading() {
-  const resultsDiv = document.getElementById('results');
-  const container = document.getElementById('results-container');
-  container.style.display = 'block';
-  resultsDiv.innerHTML = '<div class="loading"></div> <span>Executing pattern...</span>';
-}
-
+// Utility Functions
 function showError(message) {
-  const resultsDiv = document.getElementById('results');
-  const container = document.getElementById('results-container');
-  container.style.display = 'block';
-  resultsDiv.innerHTML = `<div class="error-message">❌ ${escapeHtml(message)}</div>`;
+  const errorEl = document.getElementById('error-message');
+  errorEl.textContent = message;
+  errorEl.style.display = 'block';
+  setTimeout(() => {
+    errorEl.style.display = 'none';
+  }, 5000);
 }
 
 function escapeHtml(text) {

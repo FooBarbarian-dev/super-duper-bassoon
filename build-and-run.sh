@@ -50,7 +50,7 @@ echo -e "${BLUE}========================================${NC}"
 echo -e "${GREEN}All checks passed! Launching UI...${NC}"
 echo -e "${BLUE}========================================${NC}"
 echo ""
-echo -e "${YELLOW}Starting server on http://localhost:8080${NC}"
+echo -e "${YELLOW}Starting server on http://localhost:3003${NC}"
 echo -e "${YELLOW}Press Ctrl+C to stop the server${NC}"
 echo ""
 

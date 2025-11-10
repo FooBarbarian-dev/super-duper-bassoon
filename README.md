@@ -66,7 +66,7 @@ This script will:
 1. Pull latest changes from git
 2. Clean and build all projects
 3. Run all tests
-4. Launch the UI on http://localhost:8080 (if tests pass)
+4. Launch the UI on http://localhost:3003 (if tests pass)
 
 ### Manual Build
 
@@ -103,7 +103,7 @@ cabal run pattern-comparison
 cabal run llm-patterns-ui
 ```
 
-Then open: http://localhost:8080
+Then open: http://localhost:3003
 
 ## 📚 Documentation
 

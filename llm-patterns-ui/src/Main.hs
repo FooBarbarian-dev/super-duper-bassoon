@@ -9,5 +9,5 @@ import Data.Maybe (fromMaybe)
 main :: IO ()
 main = do
   portStr <- lookupEnv "PORT"
-  let port = fromMaybe 3000 $ portStr >>= readMaybe
+  let port = fromMaybe 3003 $ portStr >>= readMaybe
   runServer port
