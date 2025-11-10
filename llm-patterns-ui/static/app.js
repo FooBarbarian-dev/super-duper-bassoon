@@ -552,9 +552,23 @@ function renderDAG(pattern) {
       break;
   }
 
-  container.innerHTML = mermaidCode;
+  console.log(`[${pattern}] Generated Mermaid code:`);
+  console.log(mermaidCode);
+
+  // Set the mermaid code as text content
+  container.textContent = mermaidCode;
   container.removeAttribute('data-processed');
-  mermaid.run({ nodes: [container] });
+
+  // Render with Mermaid
+  try {
+    mermaid.run({ nodes: [container] }).catch(err => {
+      console.error(`[${pattern}] Mermaid rendering error:`, err);
+      container.innerHTML = `<div style="color: #ff0000; padding: 1rem;">Mermaid rendering error: ${err.message}</div>`;
+    });
+  } catch (err) {
+    console.error(`[${pattern}] Mermaid error:`, err);
+    container.innerHTML = `<div style="color: #ff0000; padding: 1rem;">Error: ${err.message}</div>`;
+  }
 }
 
 // DAG Generation Functions
