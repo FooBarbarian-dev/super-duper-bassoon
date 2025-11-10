@@ -19,7 +19,8 @@ import LLMPatterns.Types
 import Langchain.LLM.Core
 import Data.Text (Text)
 import qualified Data.Text as T
-import Control.Monad.Except (throwError, liftIO)
+import Control.Monad.Except (throwError)
+import Control.Monad.IO.Class (liftIO)
 import GHC.Generics (Generic)
 import Data.Aeson (FromJSON, ToJSON)
 
