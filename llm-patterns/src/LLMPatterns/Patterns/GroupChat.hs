@@ -11,7 +11,6 @@ import qualified Data.Text as T
 import Control.Monad.Except (runExceptT)
 import Control.Monad.State (runStateT, modify)
 import Data.Time.Clock (getCurrentTime, diffUTCTime)
-import Data.List (cycle)
 
 -- | Execute group chat pattern with round-robin agent selection
 -- More idiomatic: uses cycle for infinite agent rotation, proper recursion

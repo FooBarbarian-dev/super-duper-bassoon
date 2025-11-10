@@ -52,8 +52,8 @@ executeHandoff maxHops agents input
   where
     -- Recursive handoff execution with loop detection
     runHandoffs :: Int -> Map.Map AgentId Agent -> AgentId -> Text -> OrchestrationM Text
-    runHandoffs hopsLeft agentMap currentId input
-      | hopsLeft <= 0 = pure input  -- Max hops exceeded
+    runHandoffs hopsLeft agentMap currentId currentInput
+      | hopsLeft <= 0 = pure currentInput  -- Max hops exceeded
       | otherwise = do
           -- Check visit count to prevent infinite loops
           visits <- recordVisit currentId
@@ -65,7 +65,7 @@ executeHandoff maxHops agents input
             Nothing -> throwError $ PatternError $ "Agent not found: " <> unAgentId currentId
             Just agent -> do
               -- Prompt agent
-              output <- promptAgent agent input
+              output <- promptAgent agent currentInput
 
               -- Parse decision from output
               case parseHandoffDecision output of

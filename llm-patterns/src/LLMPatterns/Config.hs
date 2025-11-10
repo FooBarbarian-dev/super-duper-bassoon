@@ -14,10 +14,8 @@ import LLMPatterns.Types
 import LLMPatterns.Agent
 import LLMPatterns.Orchestrator
 import Data.Yaml (decodeFileEither, prettyPrintParseException, FromJSON)
-import Data.Text (Text)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
-import Control.Monad (mapM)
 
 -- | Configuration file structure
 data OrchestratorConfig = OrchestratorConfig

@@ -12,7 +12,7 @@ import Control.Monad.Except (runExceptT, throwError)
 import Control.Monad.State (runStateT, modify)
 import Data.Time.Clock (getCurrentTime, diffUTCTime)
 import qualified Data.Set as Set
-import Data.List (find, cycle)
+import Data.List (find)
 
 -- | Task ledger for tracking work
 data TaskLedger = TaskLedger

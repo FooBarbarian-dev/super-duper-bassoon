@@ -14,7 +14,7 @@ import qualified Data.Text as T
 import Control.Monad.IO.Class (liftIO)
 import Data.Time.Clock (nominalDiffTimeToSeconds)
 import Network.Wai.Handler.Warp (run)
-import Network.Wai.Application.Static (defaultFileServerSettings, serveDirectoryWith)
+import Network.Wai.Application.Static (defaultFileServerSettings, staticApp)
 import WaiAppStatic.Types (ssIndices, ssMaxAge, unsafeToPiece, MaxAge(..))
 import Network.WebSockets (Connection, receiveData, sendTextData, sendClose)
 import Data.Aeson (encode, decode, object, (.=))
@@ -27,7 +27,7 @@ server = executeHandler
     :<|> wsHandler
     :<|> serveStatic
   where
-    serveStatic = serveDirectoryWith settings
+    serveStatic = staticApp settings
       where
         settings = (defaultFileServerSettings "static")
           { ssIndices = [unsafeToPiece "index.html"]
