@@ -5,60 +5,346 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LLM Orchestration Patterns Comparison</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 </head>
 <body>
   <div id="app">
-    <header>
-      <h1>🤖 LLM Orchestration Patterns</h1>
-      <p class="subtitle">Compare all agent coordination strategies in parallel</p>
+    <!-- Header Section -->
+    <header class="header">
+      <div class="header-content">
+        <h1 class="title">🤖 LLM ORCHESTRATION PATTERNS</h1>
+        <div class="header-controls">
+          <div class="ws-status" id="ws-status">
+            <span class="ws-indicator"></span>
+            <span class="ws-text">Disconnected</span>
+          </div>
+          <button id="execute-all" class="btn btn-execute">
+            <span class="btn-icon">⚡</span>
+            EXECUTE ALL
+          </button>
+        </div>
+      </div>
     </header>
 
-    <div class="container">
-      <!-- Agent Configuration -->
-      <section class="config-section">
-        <div class="section-header">
-          <h2>Agents Configuration</h2>
-          <button id="add-agent" class="btn btn-primary">+ Add Agent</button>
+    <!-- Root Prompt Input -->
+    <section class="root-prompt-section">
+      <label for="root-prompt" class="section-label">ROOT PROMPT</label>
+      <textarea
+        id="root-prompt"
+        class="root-prompt-input"
+        placeholder="Enter your prompt here... This will be sent to all patterns."
+        rows="4"
+      ></textarea>
+    </section>
+
+    <!-- Pattern Tabs Navigation -->
+    <nav class="pattern-tabs">
+      <button class="tab-button active" data-pattern="sequential">
+        <span class="tab-name">Sequential</span>
+        <span class="tab-status" data-status="ready">READY</span>
+      </button>
+      <button class="tab-button" data-pattern="concurrent">
+        <span class="tab-name">Concurrent</span>
+        <span class="tab-status" data-status="ready">READY</span>
+      </button>
+      <button class="tab-button" data-pattern="groupchat">
+        <span class="tab-name">Group Chat</span>
+        <span class="tab-status" data-status="ready">READY</span>
+      </button>
+      <button class="tab-button" data-pattern="handoff">
+        <span class="tab-name">Handoff</span>
+        <span class="tab-status" data-status="ready">READY</span>
+      </button>
+      <button class="tab-button" data-pattern="magentic">
+        <span class="tab-name">Magentic</span>
+        <span class="tab-status" data-status="ready">READY</span>
+      </button>
+    </nav>
+
+    <!-- Pattern Panels -->
+    <div class="pattern-panels">
+      <!-- Sequential Pattern -->
+      <div class="pattern-panel active" id="panel-sequential">
+        <div class="panel-grid">
+          <!-- Left Column -->
+          <div class="panel-left">
+            <!-- Pattern Description -->
+            <section class="panel-section description-section">
+              <h2 class="section-title">Pattern Description</h2>
+              <p class="description-text">
+                Chain agents one after another. Each agent receives the output of the previous agent as input.
+                The final output is from the last agent in the chain.
+              </p>
+            </section>
+
+            <!-- Agent Configuration -->
+            <section class="panel-section agents-section">
+              <div class="section-header">
+                <h2 class="section-title">Agent Configuration</h2>
+                <button class="btn btn-small btn-add-agent" data-pattern="sequential">+ Add Agent</button>
+              </div>
+              <div class="agents-container" id="agents-sequential"></div>
+            </section>
+
+            <!-- Expected DAG -->
+            <section class="panel-section dag-section">
+              <h2 class="section-title">Expected DAG</h2>
+              <div class="dag-container">
+                <div class="mermaid" id="dag-sequential"></div>
+              </div>
+            </section>
+          </div>
+
+          <!-- Right Column -->
+          <div class="panel-right">
+            <!-- Execution Log -->
+            <section class="panel-section log-section">
+              <h2 class="section-title">Execution Log</h2>
+              <div class="log-container" id="log-sequential"></div>
+            </section>
+
+            <!-- Final Result -->
+            <section class="panel-section result-section">
+              <h2 class="section-title">Final Result</h2>
+              <div class="result-container" id="result-sequential">
+                <div class="result-placeholder">No results yet. Click "EXECUTE ALL" to run this pattern.</div>
+              </div>
+            </section>
+          </div>
         </div>
-        <div id="agent-list" class="agent-list"></div>
-      </section>
+      </div>
 
-      <!-- Input Prompt -->
-      <section class="config-section">
-        <h2>Input Prompt</h2>
-        <textarea id="user-input" class="input-prompt" placeholder="Enter your prompt here..." rows="4"></textarea>
-      </section>
+      <!-- Concurrent Pattern -->
+      <div class="pattern-panel" id="panel-concurrent">
+        <div class="panel-grid">
+          <!-- Left Column -->
+          <div class="panel-left">
+            <!-- Pattern Description -->
+            <section class="panel-section description-section">
+              <h2 class="section-title">Pattern Description</h2>
+              <p class="description-text">
+                All agents execute in parallel with the same input. Results are aggregated using the selected method:
+                <strong>Vote</strong> (majority wins), <strong>Consensus</strong> (agents discuss until agreement),
+                or <strong>Combine</strong> (merge all outputs).
+              </p>
+              <div class="aggregation-selector">
+                <label for="concurrent-aggregation">Aggregation Method:</label>
+                <select id="concurrent-aggregation" class="aggregation-select">
+                  <option value="vote">Vote (Majority)</option>
+                  <option value="consensus">Consensus</option>
+                  <option value="combine">Combine</option>
+                </select>
+              </div>
+            </section>
 
-      <!-- Compare Button -->
-      <section class="action-section">
-        <button id="compare-all" class="btn btn-compare">
-          <span class="btn-icon">⚡</span>
-          Compare All Patterns
-        </button>
-        <div id="loading" class="loading" style="display: none;">
-          <div class="spinner"></div>
-          <span>Running all patterns in parallel...</span>
+            <!-- Agent Configuration -->
+            <section class="panel-section agents-section">
+              <div class="section-header">
+                <h2 class="section-title">Agent Configuration</h2>
+                <button class="btn btn-small btn-add-agent" data-pattern="concurrent">+ Add Agent</button>
+              </div>
+              <div class="agents-container" id="agents-concurrent"></div>
+            </section>
+
+            <!-- Expected DAG -->
+            <section class="panel-section dag-section">
+              <h2 class="section-title">Expected DAG</h2>
+              <div class="dag-container">
+                <div class="mermaid" id="dag-concurrent"></div>
+              </div>
+            </section>
+          </div>
+
+          <!-- Right Column -->
+          <div class="panel-right">
+            <!-- Execution Log -->
+            <section class="panel-section log-section">
+              <h2 class="section-title">Execution Log</h2>
+              <div class="log-container" id="log-concurrent"></div>
+            </section>
+
+            <!-- Final Result -->
+            <section class="panel-section result-section">
+              <h2 class="section-title">Final Result</h2>
+              <div class="result-container" id="result-concurrent">
+                <div class="result-placeholder">No results yet. Click "EXECUTE ALL" to run this pattern.</div>
+              </div>
+            </section>
+          </div>
         </div>
-      </section>
+      </div>
 
-      <!-- DAG Visualization -->
-      <section id="dag-section" class="dag-section" style="display: none;">
-        <h2>Execution Flow</h2>
-        <div id="dag-container" class="dag-container"></div>
-      </section>
+      <!-- Group Chat Pattern -->
+      <div class="pattern-panel" id="panel-groupchat">
+        <div class="panel-grid">
+          <!-- Left Column -->
+          <div class="panel-left">
+            <!-- Pattern Description -->
+            <section class="panel-section description-section">
+              <h2 class="section-title">Pattern Description</h2>
+              <p class="description-text">
+                Agents engage in multiple rounds of discussion. Each round, agents see all previous messages
+                and contribute their thoughts. After all rounds, responses are combined into a final output.
+              </p>
+              <div class="rounds-selector">
+                <label for="groupchat-rounds">Number of Rounds:</label>
+                <input type="number" id="groupchat-rounds" class="rounds-input" value="5" min="1" max="20">
+              </div>
+            </section>
 
-      <!-- Results Tabs -->
-      <section id="results-section" class="results-section" style="display: none;">
-        <h2>Pattern Results</h2>
-        <div class="tabs">
-          <div class="tab-headers" id="tab-headers"></div>
-          <div class="tab-contents" id="tab-contents"></div>
+            <!-- Agent Configuration -->
+            <section class="panel-section agents-section">
+              <div class="section-header">
+                <h2 class="section-title">Agent Configuration</h2>
+                <button class="btn btn-small btn-add-agent" data-pattern="groupchat">+ Add Agent</button>
+              </div>
+              <div class="agents-container" id="agents-groupchat"></div>
+            </section>
+
+            <!-- Expected DAG -->
+            <section class="panel-section dag-section">
+              <h2 class="section-title">Expected DAG</h2>
+              <div class="dag-container">
+                <div class="mermaid" id="dag-groupchat"></div>
+              </div>
+            </section>
+          </div>
+
+          <!-- Right Column -->
+          <div class="panel-right">
+            <!-- Execution Log -->
+            <section class="panel-section log-section">
+              <h2 class="section-title">Execution Log</h2>
+              <div class="log-container" id="log-groupchat"></div>
+            </section>
+
+            <!-- Final Result -->
+            <section class="panel-section result-section">
+              <h2 class="section-title">Final Result</h2>
+              <div class="result-container" id="result-groupchat">
+                <div class="result-placeholder">No results yet. Click "EXECUTE ALL" to run this pattern.</div>
+              </div>
+            </section>
+          </div>
         </div>
-      </section>
+      </div>
 
-      <!-- Error Display -->
-      <div id="error-message" class="error-message" style="display: none;"></div>
+      <!-- Handoff Pattern -->
+      <div class="pattern-panel" id="panel-handoff">
+        <div class="panel-grid">
+          <!-- Left Column -->
+          <div class="panel-left">
+            <!-- Pattern Description -->
+            <section class="panel-section description-section">
+              <h2 class="section-title">Pattern Description</h2>
+              <p class="description-text">
+                Dynamic agent routing. The current agent decides which agent should handle the task next based on
+                the context. Execution continues until an agent returns a final answer or max hops is reached.
+              </p>
+              <div class="hops-selector">
+                <label for="handoff-hops">Max Hops:</label>
+                <input type="number" id="handoff-hops" class="hops-input" value="10" min="1" max="50">
+              </div>
+            </section>
+
+            <!-- Agent Configuration -->
+            <section class="panel-section agents-section">
+              <div class="section-header">
+                <h2 class="section-title">Agent Configuration</h2>
+                <button class="btn btn-small btn-add-agent" data-pattern="handoff">+ Add Agent</button>
+              </div>
+              <div class="agents-container" id="agents-handoff"></div>
+            </section>
+
+            <!-- Expected DAG -->
+            <section class="panel-section dag-section">
+              <h2 class="section-title">Expected DAG</h2>
+              <div class="dag-container">
+                <div class="mermaid" id="dag-handoff"></div>
+              </div>
+            </section>
+          </div>
+
+          <!-- Right Column -->
+          <div class="panel-right">
+            <!-- Execution Log -->
+            <section class="panel-section log-section">
+              <h2 class="section-title">Execution Log</h2>
+              <div class="log-container" id="log-handoff"></div>
+            </section>
+
+            <!-- Final Result -->
+            <section class="panel-section result-section">
+              <h2 class="section-title">Final Result</h2>
+              <div class="result-container" id="result-handoff">
+                <div class="result-placeholder">No results yet. Click "EXECUTE ALL" to run this pattern.</div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+
+      <!-- Magentic Pattern -->
+      <div class="pattern-panel" id="panel-magentic">
+        <div class="panel-grid">
+          <!-- Left Column -->
+          <div class="panel-left">
+            <!-- Pattern Description -->
+            <section class="panel-section description-section">
+              <h2 class="section-title">Pattern Description</h2>
+              <p class="description-text">
+                Hierarchical task decomposition. A manager agent breaks down the input into subtasks, assigns them
+                to worker agents, then synthesizes their results. The first agent is always the manager.
+              </p>
+              <div class="iterations-selector">
+                <label for="magentic-iterations">Max Iterations:</label>
+                <input type="number" id="magentic-iterations" class="iterations-input" value="10" min="1" max="50">
+              </div>
+            </section>
+
+            <!-- Agent Configuration -->
+            <section class="panel-section agents-section">
+              <div class="section-header">
+                <h2 class="section-title">Agent Configuration</h2>
+                <button class="btn btn-small btn-add-agent" data-pattern="magentic">+ Add Agent</button>
+              </div>
+              <div class="agents-container" id="agents-magentic"></div>
+            </section>
+
+            <!-- Expected DAG -->
+            <section class="panel-section dag-section">
+              <h2 class="section-title">Expected DAG</h2>
+              <div class="dag-container">
+                <div class="mermaid" id="dag-magentic"></div>
+              </div>
+            </section>
+          </div>
+
+          <!-- Right Column -->
+          <div class="panel-right">
+            <!-- Execution Log -->
+            <section class="panel-section log-section">
+              <h2 class="section-title">Execution Log</h2>
+              <div class="log-container" id="log-magentic"></div>
+            </section>
+
+            <!-- Final Result -->
+            <section class="panel-section result-section">
+              <h2 class="section-title">Final Result</h2>
+              <div class="result-container" id="result-magentic">
+                <div class="result-placeholder">No results yet. Click "EXECUTE ALL" to run this pattern.</div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
     </div>
+
+    <!-- Global Error Display -->
+    <div id="error-toast" class="error-toast" style="display: none;"></div>
   </div>
 
   <script src="app.js"></script>
