@@ -20,6 +20,8 @@ import WaiAppStatic.Types (ssIndices, ssMaxAge, unsafeToPiece, MaxAge(..))
 import Network.WebSockets (Connection, receiveData, sendTextData, sendClose)
 import Data.Aeson (encode, decode, object, (.=))
 import Data.Traversable (for)
+import Data.Foldable (traverse_)
+import Data.Either (partitionEithers)
 
 -- | Server implementation using more idiomatic handler composition
 server :: Server API
@@ -42,9 +44,12 @@ executeHandler ExecuteRequest{..} = liftIO $ do
   -- Build agents using traverse (combines mapM + sequence idiomatically)
   agentResults <- traverse buildAgentIO erAgents
 
-  case agentResults of
-    Left err -> pure $ errorResponse err
-    Right agents -> do
+  -- Partition Either values to separate errors from successes
+  let (errors, agents) = partitionEithers agentResults
+
+  case errors of
+    (err:_) -> pure $ errorResponse err  -- Return first error
+    [] -> do
       -- Create orchestrator and execute
       let orchestrator = withPattern erPattern (new agents)
       result <- execute orchestrator erInput
@@ -58,9 +63,12 @@ compareHandler CompareRequest{..} = liftIO $ do
   -- Build agents using traverse
   agentResults <- traverse buildAgentIO crAgents
 
-  case agentResults of
-    Left err -> pure $ CompareResponse [("error", errorResponse err)]
-    Right agents -> do
+  -- Partition Either values to separate errors from successes
+  let (errors, agents) = partitionEithers agentResults
+
+  case errors of
+    (err:_) -> pure $ CompareResponse [("error", errorResponse err)]
+    [] -> do
       -- Define all patterns to compare
       let patterns =
             [ ("Sequential", Sequential)
@@ -95,9 +103,12 @@ wsHandler conn = liftIO $ do
       -- Build agents using traverse
       agentResults <- traverse buildAgentIO erAgents
 
-      case agentResults of
-        Left err -> sendTextData conn $ encode $ errorResponse err
-        Right agents -> do
+      -- Partition Either values to separate errors from successes
+      let (errors, agents) = partitionEithers agentResults
+
+      case errors of
+        (err:_) -> sendTextData conn $ encode $ errorResponse err
+        [] -> do
           -- Execute and stream events
           let orchestrator = withPattern erPattern (new agents)
           result <- execute orchestrator erInput
