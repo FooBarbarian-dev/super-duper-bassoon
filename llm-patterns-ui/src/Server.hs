@@ -8,6 +8,7 @@ module Server
   ) where
 
 import Servant
+import Servant.Utils.StaticFiles (serveDirectoryWith)
 import API
 import LLMPatterns
 import Data.Text (Text)
@@ -15,7 +16,7 @@ import qualified Data.Text as T
 import Control.Monad.IO.Class (liftIO)
 import Data.Time.Clock (nominalDiffTimeToSeconds)
 import Network.Wai.Handler.Warp (run)
-import Network.Wai.Application.Static (defaultFileServerSettings, staticApp)
+import Network.Wai.Application.Static (defaultFileServerSettings)
 import WaiAppStatic.Types (ssIndices, ssMaxAge, unsafeToPiece, MaxAge(..))
 import Network.WebSockets (Connection, receiveData, sendTextData, sendClose)
 import Data.Aeson (encode, decode, object, (.=))
@@ -30,7 +31,7 @@ server = executeHandler
     :<|> wsHandler
     :<|> serveStatic
   where
-    serveStatic = staticApp settings
+    serveStatic = serveDirectoryWith settings
       where
         settings = (defaultFileServerSettings "static")
           { ssIndices = [unsafeToPiece "index.html"]

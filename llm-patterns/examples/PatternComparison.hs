@@ -8,7 +8,6 @@ module Main where
 import LLMPatterns
 import Data.Text (Text)
 import qualified Data.Text as T
-import qualified Data.Text.IO as TIO
 
 main :: IO ()
 main = do
