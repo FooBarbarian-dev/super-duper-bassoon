@@ -6,7 +6,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 
 module LLMPatterns.Agent
-  ( Agent
+  ( Agent(..)
   , AgentConfig(..)
   , mkAgent
   , promptAgent
