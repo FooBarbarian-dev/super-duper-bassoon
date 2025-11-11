@@ -27,6 +27,7 @@ import Data.Foldable (traverse_)
 import Data.Either (partitionEithers)
 import System.Log.FastLogger
 import qualified Data.ByteString.Char8 as BS
+import qualified Data.ByteString.Lazy.Char8 as BSL
 
 -- | Server implementation using more idiomatic handler composition
 server :: Server API
@@ -51,12 +52,12 @@ executeHandler ExecuteRequest{..} = liftIO $ do
   (logger, cleanup) <- newTimedFastLogger timeCache (LogStdout defaultBufSize)
 
   -- Log incoming request
-  logger $ toLogStr ("📥 Execute request received: " ++ show erPattern ++ " with " ++ show (length erAgents) ++ " agent(s)\n" :: String)
-  logger $ toLogStr ("   Request body: " ++ BS.unpack (JSON.encode (object ["pattern" .= erPattern, "agents" .= (length erAgents), "input_length" .= T.length erInput])) ++ "\n" :: String)
+  logger $ \_ -> toLogStr ("📥 Execute request received: " ++ show erPattern ++ " with " ++ show (length erAgents) ++ " agent(s)\n" :: String)
+  logger $ \_ -> toLogStr ("   Request body: " ++ BSL.unpack (JSON.encode (object ["pattern" .= erPattern, "agents" .= (length erAgents), "input_length" .= T.length erInput])) ++ "\n" :: String)
 
   -- Build agents using traverse (combines mapM + sequence idiomatically)
   startTime <- getCurrentTime
-  logger $ toLogStr ("🔧 Building agents...\n" :: String)
+  logger $ \_ -> toLogStr ("🔧 Building agents...\n" :: String)
   agentResults <- traverse buildAgentIO erAgents
 
   -- Partition Either values to separate errors from successes
@@ -64,11 +65,11 @@ executeHandler ExecuteRequest{..} = liftIO $ do
 
   result <- case errors of
     (err:_) -> do
-      logger $ toLogStr ("❌ Agent build error: " ++ T.unpack (errorToText err) ++ "\n" :: String)
+      logger $ \_ -> toLogStr ("❌ Agent build error: " ++ T.unpack (errorToText err) ++ "\n" :: String)
       pure $ errorResponse err  -- Return first error
     [] -> do
-      logger $ toLogStr ("✅ Built " ++ show (length agents) ++ " agent(s) successfully\n" :: String)
-      logger $ toLogStr ("🚀 Executing pattern: " ++ show erPattern ++ "\n" :: String)
+      logger $ \_ -> toLogStr ("✅ Built " ++ show (length agents) ++ " agent(s) successfully\n" :: String)
+      logger $ \_ -> toLogStr ("🚀 Executing pattern: " ++ show erPattern ++ "\n" :: String)
 
       -- Create orchestrator and execute
       let orchestrator = withPattern erPattern (new agents)
@@ -79,12 +80,12 @@ executeHandler ExecuteRequest{..} = liftIO $ do
 
       case execResult of
         Left err -> do
-          logger $ toLogStr ("❌ Pattern execution failed: " ++ T.unpack (errorToText err) ++ "\n" :: String)
+          logger $ \_ -> toLogStr ("❌ Pattern execution failed: " ++ T.unpack (errorToText err) ++ "\n" :: String)
           pure $ errorResponse err
         Right pr -> do
-          logger $ toLogStr ("✅ Pattern execution completed in " ++ show duration ++ "s\n" :: String)
-          logger $ toLogStr ("   Output length: " ++ show (T.length (prOutput pr)) ++ " chars\n" :: String)
-          logger $ toLogStr ("   Trace events: " ++ show (length (prTrace pr)) ++ "\n" :: String)
+          logger $ \_ -> toLogStr ("✅ Pattern execution completed in " ++ show duration ++ "s\n" :: String)
+          logger $ \_ -> toLogStr ("   Output length: " ++ show (T.length (prOutput pr)) ++ " chars\n" :: String)
+          logger $ \_ -> toLogStr ("   Trace events: " ++ show (length (prTrace pr)) ++ "\n" :: String)
           pure $ successResponse pr
 
   cleanup
