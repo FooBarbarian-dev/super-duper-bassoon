@@ -3,6 +3,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 -- | Langchain LLM Core with real API implementations
 module Langchain.LLM.Core
@@ -24,6 +25,7 @@ import qualified Data.Text.Encoding as TE
 import GHC.Generics (Generic)
 import Data.Aeson (FromJSON, ToJSON, object, (.=), (.:))
 import qualified Data.Aeson as JSON
+import Data.Aeson.Types (Parser, parseMaybe)
 import Network.HTTP.Simple
 import Network.HTTP.Client (responseTimeoutMicro)
 import qualified Data.ByteString.Lazy as BSL
@@ -166,9 +168,9 @@ makeOpenAIRequest apiKey modelName messages = do
   case JSON.eitherDecode responseBody of
     Left err -> pure $ Left $ "Failed to parse OpenAI response: " ++ err
     Right value -> do
-      case JSON.parse extractOpenAIContent value of
-        JSON.Success content -> pure $ Right content
-        JSON.Error err -> pure $ Left $ "Failed to extract content from OpenAI response: " ++ err
+      case parseMaybe extractOpenAIContent value of
+        Just content -> pure $ Right content
+        Nothing -> pure $ Left $ "Failed to extract content from OpenAI response"
 
 -- | Make Claude API request with 60 second timeout
 makeClaudeRequest :: Text -> Text -> [Message] -> IO (Either String Text)
@@ -210,9 +212,9 @@ makeClaudeRequest apiKey modelName messages = do
   case JSON.eitherDecode responseBody of
     Left err -> pure $ Left $ "Failed to parse Claude response: " ++ err
     Right value -> do
-      case JSON.parse extractClaudeContent value of
-        JSON.Success content -> pure $ Right content
-        JSON.Error err -> pure $ Left $ "Failed to extract content from Claude response: " ++ err
+      case parseMaybe extractClaudeContent value of
+        Just content -> pure $ Right content
+        Nothing -> pure $ Left $ "Failed to extract content from Claude response"
 
 -- | Convert Message to OpenAI format
 messageToOpenAI :: Message -> JSON.Value
@@ -237,7 +239,7 @@ messageToClaude (Message role content _) = object
     roleToText System = "user" -- Claude doesn't support system in messages array
 
 -- | Extract content from OpenAI response
-extractOpenAIContent :: JSON.Value -> JSON.Parser Text
+extractOpenAIContent :: JSON.Value -> Parser Text
 extractOpenAIContent = JSON.withObject "OpenAI Response" $ \o -> do
   choices <- o .: "choices"
   case choices of
@@ -248,7 +250,7 @@ extractOpenAIContent = JSON.withObject "OpenAI Response" $ \o -> do
       ) firstChoice
 
 -- | Extract content from Claude response
-extractClaudeContent :: JSON.Value -> JSON.Parser Text
+extractClaudeContent :: JSON.Value -> Parser Text
 extractClaudeContent = JSON.withObject "Claude Response" $ \o -> do
   contentArray <- o .: "content"
   case contentArray of
