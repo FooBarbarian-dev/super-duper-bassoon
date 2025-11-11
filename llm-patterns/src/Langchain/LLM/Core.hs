@@ -2,9 +2,9 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE OverloadedStrings #-}
 
--- | Stub module for Langchain LLM Core
--- This is a minimal implementation for compilation and testing
+-- | Langchain LLM Core with real API implementations
 module Langchain.LLM.Core
   ( LLM(..)
   , LLMParams
@@ -15,11 +15,20 @@ module Langchain.LLM.Core
   -- Re-export specific models for compatibility
   , OllamaModel(..)
   , OpenAIModel(..)
+  , ClaudeModel(..)
   ) where
 
 import Data.Text (Text)
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import GHC.Generics (Generic)
-import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson (FromJSON, ToJSON, object, (.=), (.:))
+import qualified Data.Aeson as JSON
+import Network.HTTP.Simple
+import Network.HTTP.Client (responseTimeoutMicro)
+import qualified Data.ByteString.Lazy as BSL
+import System.Environment (lookupEnv)
+import Control.Exception (try, SomeException)
 
 -- | Role in a conversation
 data Role = System | User | Assistant
@@ -62,9 +71,17 @@ data OpenAIModel = OpenAIModel
   } deriving stock (Eq, Show, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
+-- | Claude model configuration
+data ClaudeModel = ClaudeModel
+  { claudeModelName :: Text
+  , claudeApiKey :: Maybe Text
+  , claudeOptions :: [Text]
+  } deriving stock (Eq, Show, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
 -- | LLM typeclass
 class LLM m where
-  -- | Chat with the model
+  -- | Chat with the model (with 60 second timeout)
   chat :: m -> [Message] -> Maybe (LLMParams m) -> IO (Either String Text)
 
 -- | Ollama instance (stub implementation for testing)
@@ -76,11 +93,164 @@ instance LLM OllamaModel where
       (msg:_) -> pure $ Right $ "Ollama (" <> ollamaModelName model <> ") response to: " <> msg
       [] -> pure $ Left "No user message found"
 
--- | OpenAI instance (stub implementation for testing)
+-- | OpenAI instance with real API calls
 instance LLM OpenAIModel where
   chat model messages _params = do
-    -- Stub implementation: just echo the last user message
-    let lastUserMsg = reverse [ msgContent msg | msg <- messages, msgRole msg == User ]
-    case lastUserMsg of
-      (msg:_) -> pure $ Right $ "OpenAI (" <> openaiModelName model <> ") response to: " <> msg
-      [] -> pure $ Left "No user message found"
+    -- Get API key from model config or environment
+    apiKey <- case openaiApiKey model of
+      Just key -> pure key
+      Nothing -> do
+        envKey <- lookupEnv "OPENAI_API_KEY"
+        case envKey of
+          Just k -> pure $ T.pack k
+          Nothing -> pure ""
+
+    if T.null apiKey
+      then pure $ Left "OpenAI API key not found in config or OPENAI_API_KEY environment variable"
+      else do
+        result <- try $ makeOpenAIRequest apiKey (openaiModelName model) messages
+        case result of
+          Left (e :: SomeException) -> pure $ Left $ "OpenAI API error: " ++ show e
+          Right resp -> pure resp
+
+-- | Claude instance with real API calls
+instance LLM ClaudeModel where
+  chat model messages _params = do
+    -- Get API key from model config or environment
+    apiKey <- case claudeApiKey model of
+      Just key -> pure key
+      Nothing -> do
+        envKey <- lookupEnv "ANTHROPIC_API_KEY"
+        case envKey of
+          Just k -> pure $ T.pack k
+          Nothing -> pure ""
+
+    if T.null apiKey
+      then pure $ Left "Claude API key not found in config or ANTHROPIC_API_KEY environment variable"
+      else do
+        result <- try $ makeClaudeRequest apiKey (claudeModelName model) messages
+        case result of
+          Left (e :: SomeException) -> pure $ Left $ "Claude API error: " ++ show e
+          Right resp -> pure resp
+
+-- | Make OpenAI API request with 60 second timeout
+makeOpenAIRequest :: Text -> Text -> [Message] -> IO (Either String Text)
+makeOpenAIRequest apiKey modelName messages = do
+  let url = "https://api.openai.com/v1/chat/completions"
+
+  -- Convert messages to OpenAI format
+  let openAIMessages = map messageToOpenAI messages
+
+  -- Build request body
+  let requestBody = object
+        [ "model" .= modelName
+        , "messages" .= openAIMessages
+        , "max_tokens" .= (4000 :: Int)
+        , "temperature" .= (0.7 :: Double)
+        ]
+
+  -- Create request with 60 second timeout
+  request <- parseRequest $ T.unpack url
+  let request' = setRequestMethod "POST"
+               $ setRequestHeader "Content-Type" ["application/json"]
+               $ setRequestHeader "Authorization" [TE.encodeUtf8 $ "Bearer " <> apiKey]
+               $ setRequestBodyJSON requestBody
+               $ setRequestResponseTimeout (responseTimeoutMicro 60000000) -- 60 seconds
+               $ request
+
+  -- Make request
+  response <- httpLBS request'
+
+  -- Parse response
+  let responseBody = getResponseBody response
+  case JSON.eitherDecode responseBody of
+    Left err -> pure $ Left $ "Failed to parse OpenAI response: " ++ err
+    Right value -> do
+      case JSON.parse extractOpenAIContent value of
+        JSON.Success content -> pure $ Right content
+        JSON.Error err -> pure $ Left $ "Failed to extract content from OpenAI response: " ++ err
+
+-- | Make Claude API request with 60 second timeout
+makeClaudeRequest :: Text -> Text -> [Message] -> IO (Either String Text)
+makeClaudeRequest apiKey modelName messages = do
+  let url = "https://api.anthropic.com/v1/messages"
+
+  -- Separate system message from other messages
+  let (systemMsg, otherMessages) = case messages of
+        (Message System content _ : rest) -> (Just content, rest)
+        _ -> (Nothing, messages)
+
+  -- Convert messages to Claude format (only user/assistant)
+  let claudeMessages = map messageToClaude otherMessages
+
+  -- Build request body
+  let requestBody = object $
+        [ "model" .= modelName
+        , "messages" .= claudeMessages
+        , "max_tokens" .= (4000 :: Int)
+        ] ++ case systemMsg of
+          Just sys -> ["system" .= sys]
+          Nothing -> []
+
+  -- Create request with 60 second timeout
+  request <- parseRequest $ T.unpack url
+  let request' = setRequestMethod "POST"
+               $ setRequestHeader "Content-Type" ["application/json"]
+               $ setRequestHeader "x-api-key" [TE.encodeUtf8 apiKey]
+               $ setRequestHeader "anthropic-version" ["2023-06-01"]
+               $ setRequestBodyJSON requestBody
+               $ setRequestResponseTimeout (responseTimeoutMicro 60000000) -- 60 seconds
+               $ request
+
+  -- Make request
+  response <- httpLBS request'
+
+  -- Parse response
+  let responseBody = getResponseBody response
+  case JSON.eitherDecode responseBody of
+    Left err -> pure $ Left $ "Failed to parse Claude response: " ++ err
+    Right value -> do
+      case JSON.parse extractClaudeContent value of
+        JSON.Success content -> pure $ Right content
+        JSON.Error err -> pure $ Left $ "Failed to extract content from Claude response: " ++ err
+
+-- | Convert Message to OpenAI format
+messageToOpenAI :: Message -> JSON.Value
+messageToOpenAI (Message role content _) = object
+  [ "role" .= roleToText role
+  , "content" .= content
+  ]
+  where
+    roleToText System = "system" :: Text
+    roleToText User = "user"
+    roleToText Assistant = "assistant"
+
+-- | Convert Message to Claude format (excludes system messages)
+messageToClaude :: Message -> JSON.Value
+messageToClaude (Message role content _) = object
+  [ "role" .= roleToText role
+  , "content" .= content
+  ]
+  where
+    roleToText User = "user" :: Text
+    roleToText Assistant = "assistant"
+    roleToText System = "user" -- Claude doesn't support system in messages array
+
+-- | Extract content from OpenAI response
+extractOpenAIContent :: JSON.Value -> JSON.Parser Text
+extractOpenAIContent = JSON.withObject "OpenAI Response" $ \o -> do
+  choices <- o .: "choices"
+  case choices of
+    [] -> fail "No choices in response"
+    (firstChoice:_) -> JSON.withObject "Choice" (\c -> do
+      message <- c .: "message"
+      JSON.withObject "Message" (\m -> m .: "content") message
+      ) firstChoice
+
+-- | Extract content from Claude response
+extractClaudeContent :: JSON.Value -> JSON.Parser Text
+extractClaudeContent = JSON.withObject "Claude Response" $ \o -> do
+  contentArray <- o .: "content"
+  case contentArray of
+    [] -> fail "No content in response"
+    (firstContent:_) -> JSON.withObject "Content" (\c -> c .: "text") firstContent

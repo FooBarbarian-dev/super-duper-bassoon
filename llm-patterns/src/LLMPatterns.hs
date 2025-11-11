@@ -44,6 +44,7 @@ module LLMPatterns
   , mkAgent
   , mkOllamaAgent
   , mkOpenAIAgent
+  , mkClaudeAgent
   , AgentConfig(..)
   , fromConfig
 

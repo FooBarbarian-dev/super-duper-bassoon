@@ -12,6 +12,7 @@ module LLMPatterns.Agent
   , promptAgent
   , mkOllamaAgent
   , mkOpenAIAgent
+  , mkClaudeAgent
   , fromConfig
   ) where
 
@@ -78,10 +79,15 @@ mkOpenAIAgent :: AgentId -> Text -> Text -> Agent
 mkOpenAIAgent aid modelName prompt =
   mkAgent aid (OpenAIModel modelName Nothing []) prompt Nothing
 
+mkClaudeAgent :: AgentId -> Text -> Text -> Agent
+mkClaudeAgent aid modelName prompt =
+  mkAgent aid (ClaudeModel modelName Nothing []) prompt Nothing
+
 -- | Build agent from configuration
 -- This is a pure function that describes how to build an agent
 fromConfig :: AgentConfig -> Either OrchestrationError (IO Agent)
 fromConfig AgentConfig{..} = case acProvider of
   "ollama" -> Right $ pure $ mkOllamaAgent acId acModel acSystemPrompt
   "openai" -> Right $ pure $ mkOpenAIAgent acId acModel acSystemPrompt
+  "claude" -> Right $ pure $ mkClaudeAgent acId acModel acSystemPrompt
   unknown -> Left $ ConfigurationError $ "Unknown provider: " <> unknown

@@ -4,8 +4,8 @@
 // Provider Models Configuration
 const providerModels = {
   ollama: ['llama3.2', 'llama3.1', 'mistral', 'codellama', 'phi3'],
-  openai: ['gpt-4', 'gpt-4-turbo', 'gpt-3.5-turbo'],
-  claude: ['claude-3-5-sonnet-20241022', 'claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307']
+  openai: ['gpt-5-turbo', 'gpt-5', 'gpt-4o', 'gpt-4-turbo'],
+  claude: ['claude-sonnet-4-5-20250514', 'claude-3-5-sonnet-20241022', 'claude-3-opus-20240229', 'claude-3-haiku-20240307']
 };
 
 // Global State Management
@@ -55,94 +55,94 @@ const defaultAgents = {
   sequential: [
     {
       acId: 'analyzer',
-      acProvider: 'ollama',
-      acModel: 'llama3.2',
+      acProvider: 'openai',
+      acModel: 'gpt-5-turbo',
       acSystemPrompt: 'You are an analytical AI that breaks down problems into components.'
     },
     {
       acId: 'synthesizer',
-      acProvider: 'ollama',
-      acModel: 'llama3.2',
+      acProvider: 'claude',
+      acModel: 'claude-sonnet-4-5-20250514',
       acSystemPrompt: 'You are a synthesis AI that combines insights into coherent solutions.'
     }
   ],
   concurrent: [
     {
       acId: 'expert1',
-      acProvider: 'ollama',
-      acModel: 'llama3.2',
+      acProvider: 'openai',
+      acModel: 'gpt-5-turbo',
       acSystemPrompt: 'You are an AI expert focusing on technical accuracy.'
     },
     {
       acId: 'expert2',
-      acProvider: 'ollama',
-      acModel: 'llama3.2',
+      acProvider: 'claude',
+      acModel: 'claude-sonnet-4-5-20250514',
       acSystemPrompt: 'You are an AI expert focusing on practical applications.'
     },
     {
       acId: 'expert3',
-      acProvider: 'ollama',
-      acModel: 'llama3.2',
+      acProvider: 'openai',
+      acModel: 'gpt-5-turbo',
       acSystemPrompt: 'You are an AI expert focusing on creative solutions.'
     }
   ],
   groupchat: [
     {
       acId: 'facilitator',
-      acProvider: 'ollama',
-      acModel: 'llama3.2',
+      acProvider: 'openai',
+      acModel: 'gpt-5-turbo',
       acSystemPrompt: 'You facilitate discussions and summarize key points.'
     },
     {
       acId: 'critic',
-      acProvider: 'ollama',
-      acModel: 'llama3.2',
+      acProvider: 'claude',
+      acModel: 'claude-sonnet-4-5-20250514',
       acSystemPrompt: 'You provide critical analysis and identify potential issues.'
     },
     {
       acId: 'builder',
-      acProvider: 'ollama',
-      acModel: 'llama3.2',
+      acProvider: 'openai',
+      acModel: 'gpt-5-turbo',
       acSystemPrompt: 'You build upon ideas and propose concrete implementations.'
     }
   ],
   handoff: [
     {
       acId: 'router',
-      acProvider: 'ollama',
-      acModel: 'llama3.2',
+      acProvider: 'openai',
+      acModel: 'gpt-5-turbo',
       acSystemPrompt: 'You route tasks to specialized agents based on requirements.'
     },
     {
       acId: 'specialist_a',
-      acProvider: 'ollama',
-      acModel: 'llama3.2',
+      acProvider: 'claude',
+      acModel: 'claude-sonnet-4-5-20250514',
       acSystemPrompt: 'You are a specialist in data analysis and processing.'
     },
     {
       acId: 'specialist_b',
-      acProvider: 'ollama',
-      acModel: 'llama3.2',
+      acProvider: 'openai',
+      acModel: 'gpt-5-turbo',
       acSystemPrompt: 'You are a specialist in solution design and architecture.'
     }
   ],
   magentic: [
     {
       acId: 'manager',
-      acProvider: 'ollama',
-      acModel: 'llama3.2',
+      acProvider: 'openai',
+      acModel: 'gpt-5-turbo',
       acSystemPrompt: 'You are a manager that decomposes tasks and coordinates workers.'
     },
     {
       acId: 'worker1',
-      acProvider: 'ollama',
-      acModel: 'llama3.2',
+      acProvider: 'claude',
+      acModel: 'claude-sonnet-4-5-20250514',
       acSystemPrompt: 'You are a worker agent that executes assigned subtasks efficiently.'
     },
     {
       acId: 'worker2',
-      acProvider: 'ollama',
-      acModel: 'llama3.2',
+      acProvider: 'openai',
+      acModel: 'gpt-5-turbo',
       acSystemPrompt: 'You are a worker agent specialized in verification and quality checks.'
     }
   ]
@@ -371,6 +371,12 @@ function switchTab(pattern) {
       panel.classList.remove('active');
     }
   });
+
+  // Re-render DAG for the newly visible panel
+  // This is necessary because Mermaid doesn't render properly in hidden containers
+  setTimeout(() => {
+    renderDAG(pattern);
+  }, 50);
 }
 
 // Agent Management
@@ -378,8 +384,8 @@ function addAgent(pattern) {
   const agentIndex = state.patterns[pattern].agents.length;
   const newAgent = {
     acId: `agent${agentIndex + 1}`,
-    acProvider: 'ollama',
-    acModel: 'llama3.2',
+    acProvider: 'openai',
+    acModel: 'gpt-5-turbo',
     acSystemPrompt: 'You are a helpful AI assistant.'
   };
 
