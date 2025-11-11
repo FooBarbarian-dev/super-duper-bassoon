@@ -29,6 +29,7 @@ import Data.Aeson.Types (Parser, parseMaybe)
 import Network.HTTP.Simple
 import Network.HTTP.Client (responseTimeoutMicro)
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.ByteString as BS
 import System.Environment (lookupEnv)
 import Control.Exception (try, SomeException)
 
@@ -191,7 +192,8 @@ makeOpenAIRequest apiKey modelName messages = do
 
   -- Parse response
   let responseBody = getResponseBody response
-  putStrLn $ "📥 OpenAI Response: " ++ take 500 (BSL.unpack responseBody)
+  let responsePreview = T.unpack $ T.take 500 $ TE.decodeUtf8 $ BSL.toStrict responseBody
+  putStrLn $ "📥 OpenAI Response: " ++ responsePreview
 
   case JSON.eitherDecode responseBody of
     Left err -> do
@@ -245,7 +247,8 @@ makeClaudeRequest apiKey modelName messages = do
 
   -- Parse response
   let responseBody = getResponseBody response
-  putStrLn $ "📥 Claude Response: " ++ take 500 (BSL.unpack responseBody)
+  let responsePreview = T.unpack $ T.take 500 $ TE.decodeUtf8 $ BSL.toStrict responseBody
+  putStrLn $ "📥 Claude Response: " ++ responsePreview
 
   case JSON.eitherDecode responseBody of
     Left err -> do
