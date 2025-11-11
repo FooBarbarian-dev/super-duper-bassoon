@@ -98,6 +98,9 @@ instance LLM OllamaModel where
 -- | OpenAI instance with real API calls
 instance LLM OpenAIModel where
   chat model messages _params = do
+    putStrLn $ "🔵 OpenAI API: Calling model " ++ T.unpack (openaiModelName model)
+    putStrLn $ "   Messages: " ++ show (length messages) ++ " message(s)"
+
     -- Get API key from model config or environment
     apiKey <- case openaiApiKey model of
       Just key -> pure key
@@ -108,16 +111,28 @@ instance LLM OpenAIModel where
           Nothing -> pure ""
 
     if T.null apiKey
-      then pure $ Left "OpenAI API key not found in config or OPENAI_API_KEY environment variable"
+      then do
+        putStrLn "❌ OpenAI API: No API key found"
+        pure $ Left "OpenAI API key not found in config or OPENAI_API_KEY environment variable"
       else do
+        putStrLn "🔑 OpenAI API: API key found, making request..."
         result <- try $ makeOpenAIRequest apiKey (openaiModelName model) messages
         case result of
-          Left (e :: SomeException) -> pure $ Left $ "OpenAI API error: " ++ show e
-          Right resp -> pure resp
+          Left (e :: SomeException) -> do
+            putStrLn $ "❌ OpenAI API error: " ++ show e
+            pure $ Left $ "OpenAI API error: " ++ show e
+          Right resp -> do
+            case resp of
+              Left err -> putStrLn $ "❌ OpenAI API returned error: " ++ err
+              Right txt -> putStrLn $ "✅ OpenAI API success: " ++ show (T.length txt) ++ " chars"
+            pure resp
 
 -- | Claude instance with real API calls
 instance LLM ClaudeModel where
   chat model messages _params = do
+    putStrLn $ "🟣 Claude API: Calling model " ++ T.unpack (claudeModelName model)
+    putStrLn $ "   Messages: " ++ show (length messages) ++ " message(s)"
+
     -- Get API key from model config or environment
     apiKey <- case claudeApiKey model of
       Just key -> pure key
@@ -128,12 +143,21 @@ instance LLM ClaudeModel where
           Nothing -> pure ""
 
     if T.null apiKey
-      then pure $ Left "Claude API key not found in config or ANTHROPIC_API_KEY environment variable"
+      then do
+        putStrLn "❌ Claude API: No API key found"
+        pure $ Left "Claude API key not found in config or ANTHROPIC_API_KEY environment variable"
       else do
+        putStrLn "🔑 Claude API: API key found, making request..."
         result <- try $ makeClaudeRequest apiKey (claudeModelName model) messages
         case result of
-          Left (e :: SomeException) -> pure $ Left $ "Claude API error: " ++ show e
-          Right resp -> pure resp
+          Left (e :: SomeException) -> do
+            putStrLn $ "❌ Claude API error: " ++ show e
+            pure $ Left $ "Claude API error: " ++ show e
+          Right resp -> do
+            case resp of
+              Left err -> putStrLn $ "❌ Claude API returned error: " ++ err
+              Right txt -> putStrLn $ "✅ Claude API success: " ++ show (T.length txt) ++ " chars"
+            pure resp
 
 -- | Make OpenAI API request with 60 second timeout
 makeOpenAIRequest :: Text -> Text -> [Message] -> IO (Either String Text)

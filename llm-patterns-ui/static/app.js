@@ -184,15 +184,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // initializeWebSocket();
   setWebSocketStatus('unavailable');
   renderAllAgents();
-  renderAllDAGs();
+
+  // Only render DAG for the currently active tab (sequential) initially
+  renderDAG('sequential');
 
   console.log('UI initialized successfully');
 });
 
 // Initialize State with Default Agents
 function initializeState() {
+  console.log('Initializing state with default agents:');
   Object.keys(state.patterns).forEach(pattern => {
     state.patterns[pattern].agents = JSON.parse(JSON.stringify(defaultAgents[pattern]));
+    console.log(`  ${pattern}:`, state.patterns[pattern].agents.map(a => `${a.acId} (${a.acProvider}/${a.acModel})`).join(', '));
   });
 }
 
@@ -352,6 +356,7 @@ function handleWebSocketMessage(data) {
 function switchTab(pattern) {
   if (state.currentPattern === pattern) return;
 
+  console.log(`Switching to tab: ${pattern}`);
   state.currentPattern = pattern;
 
   // Update tab buttons
@@ -375,8 +380,15 @@ function switchTab(pattern) {
   // Re-render DAG for the newly visible panel
   // This is necessary because Mermaid doesn't render properly in hidden containers
   setTimeout(() => {
+    console.log(`Re-rendering DAG for: ${pattern}`);
+    const container = document.getElementById(`dag-${pattern}`);
+    if (container) {
+      // Clear any previous content
+      container.textContent = '';
+      container.removeAttribute('data-processed');
+    }
     renderDAG(pattern);
-  }, 50);
+  }, 100);
 }
 
 // Agent Management
@@ -846,7 +858,11 @@ async function executePattern(patternName, input) {
   };
 
   console.log(`[${patternName}] Request body:`, JSON.stringify(requestBody, null, 2));
+  console.log(`[${patternName}] Agents:`, pattern.agents.map(a => `${a.acId} (${a.acProvider}/${a.acModel})`).join(', '));
   addLog(patternName, `📤 Sending request to backend with ${pattern.agents.length} agent(s)...`);
+  pattern.agents.forEach((agent, i) => {
+    addLog(patternName, `   Agent ${i + 1}: ${agent.acId} using ${agent.acProvider}/${agent.acModel}`);
+  });
 
   try {
     const response = await fetch('/api/execute', {
@@ -992,11 +1008,30 @@ function setResult(pattern, result) {
   if (result.error || result.exError) {
     resultContainer.classList.add('result-error');
     const errorMsg = result.error || result.exError;
-    resultContainer.innerHTML = `<div class="result-content">${escapeHtml(errorMsg)}</div>`;
+    resultContainer.innerHTML = `
+      <div class="result-header error">
+        <span class="result-badge">ERROR</span>
+      </div>
+      <div class="result-content">${escapeHtml(errorMsg)}</div>
+    `;
   } else {
     resultContainer.classList.remove('result-error');
     const output = result.exOutput || result;
-    resultContainer.innerHTML = `<div class="result-content">${escapeHtml(output)}</div>`;
+    const duration = result.exDuration || 0;
+    const wordCount = output.split(/\s+/).length;
+    const charCount = output.length;
+
+    resultContainer.innerHTML = `
+      <div class="result-header">
+        <span class="result-badge success">SUCCESS</span>
+        <span class="result-stats">
+          ⏱️ ${duration.toFixed(2)}s |
+          📝 ${wordCount} words |
+          🔤 ${charCount} chars
+        </span>
+      </div>
+      <div class="result-content">${escapeHtml(output)}</div>
+    `;
   }
 }
 

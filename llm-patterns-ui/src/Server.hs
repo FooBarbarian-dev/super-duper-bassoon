@@ -55,6 +55,12 @@ executeHandler ExecuteRequest{..} = liftIO $ do
   logger $ \_ -> toLogStr ("📥 Execute request received: " ++ show erPattern ++ " with " ++ show (length erAgents) ++ " agent(s)\n" :: String)
   logger $ \_ -> toLogStr ("   Request body: " ++ BSL.unpack (JSON.encode (object ["pattern" .= erPattern, "agents" .= (length erAgents), "input_length" .= T.length erInput])) ++ "\n" :: String)
 
+  -- Log agent details
+  logger $ \_ -> toLogStr ("🤖 Agent configurations:\n" :: String)
+  traverse_ (\(idx, AgentConfig{..}) ->
+    logger $ \_ -> toLogStr ("   " ++ show (idx :: Int) ++ ". " ++ T.unpack (unAgentId acId) ++ " (provider: " ++ T.unpack acProvider ++ ", model: " ++ T.unpack acModel ++ ")\n" :: String)
+    ) (zip [1..] erAgents)
+
   -- Build agents using traverse (combines mapM + sequence idiomatically)
   startTime <- getCurrentTime
   logger $ \_ -> toLogStr ("🔧 Building agents...\n" :: String)

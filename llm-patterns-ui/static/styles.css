@@ -758,6 +758,42 @@ body {
   word-wrap: break-word;
 }
 
+.result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px solid var(--accent-cyan);
+}
+
+.result-badge {
+  font-family: var(--font-header);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.75rem;
+  border-radius: 3px;
+  letter-spacing: 1px;
+}
+
+.result-badge.success {
+  background: var(--success);
+  color: var(--bg-primary);
+  box-shadow: var(--glow-green);
+}
+
+.result-badge.error {
+  background: var(--error);
+  color: var(--bg-primary);
+  box-shadow: var(--glow-red);
+}
+
+.result-stats {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
 .result-error {
   border-color: var(--error);
   box-shadow: var(--glow-red);
