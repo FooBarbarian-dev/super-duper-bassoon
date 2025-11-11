@@ -175,6 +175,8 @@ makeOpenAIRequest apiKey modelName messages = do
         , "temperature" .= (0.7 :: Double)
         ]
 
+  putStrLn $ "📤 OpenAI Request: " ++ T.unpack modelName
+
   -- Create request with 60 second timeout
   request <- parseRequest $ T.unpack url
   let request' = setRequestMethod "POST"
@@ -189,12 +191,20 @@ makeOpenAIRequest apiKey modelName messages = do
 
   -- Parse response
   let responseBody = getResponseBody response
+  putStrLn $ "📥 OpenAI Response: " ++ take 500 (BSL.unpack responseBody)
+
   case JSON.eitherDecode responseBody of
-    Left err -> pure $ Left $ "Failed to parse OpenAI response: " ++ err
+    Left err -> do
+      putStrLn $ "❌ JSON decode error: " ++ err
+      pure $ Left $ "Failed to parse OpenAI response: " ++ err
     Right value -> do
+      putStrLn $ "✅ JSON decoded successfully"
       case parseMaybe extractOpenAIContent value of
         Just content -> pure $ Right content
-        Nothing -> pure $ Left $ "Failed to extract content from OpenAI response"
+        Nothing -> do
+          putStrLn $ "❌ Failed to extract content from parsed JSON"
+          putStrLn $ "Response structure: " ++ take 300 (show value)
+          pure $ Left $ "Failed to extract content from OpenAI response"
 
 -- | Make Claude API request with 60 second timeout
 makeClaudeRequest :: Text -> Text -> [Message] -> IO (Either String Text)
@@ -218,6 +228,8 @@ makeClaudeRequest apiKey modelName messages = do
           Just sys -> ["system" .= sys]
           Nothing -> []
 
+  putStrLn $ "📤 Claude Request: " ++ T.unpack modelName
+
   -- Create request with 60 second timeout
   request <- parseRequest $ T.unpack url
   let request' = setRequestMethod "POST"
@@ -233,12 +245,20 @@ makeClaudeRequest apiKey modelName messages = do
 
   -- Parse response
   let responseBody = getResponseBody response
+  putStrLn $ "📥 Claude Response: " ++ take 500 (BSL.unpack responseBody)
+
   case JSON.eitherDecode responseBody of
-    Left err -> pure $ Left $ "Failed to parse Claude response: " ++ err
+    Left err -> do
+      putStrLn $ "❌ JSON decode error: " ++ err
+      pure $ Left $ "Failed to parse Claude response: " ++ err
     Right value -> do
+      putStrLn $ "✅ JSON decoded successfully"
       case parseMaybe extractClaudeContent value of
         Just content -> pure $ Right content
-        Nothing -> pure $ Left $ "Failed to extract content from Claude response"
+        Nothing -> do
+          putStrLn $ "❌ Failed to extract content from parsed JSON"
+          putStrLn $ "Response structure: " ++ take 300 (show value)
+          pure $ Left $ "Failed to extract content from Claude response"
 
 -- | Convert Message to OpenAI format
 messageToOpenAI :: Message -> JSON.Value
