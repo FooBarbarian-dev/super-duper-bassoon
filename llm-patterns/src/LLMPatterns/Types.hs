@@ -13,7 +13,7 @@ module LLMPatterns.Types where
 
 import Control.Monad.Except (ExceptT)
 import Control.Monad.State (StateT, get, modify, put)
-import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, (.=))
+import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, (.=), (.:))
 import qualified Data.Map.Strict as Map
 import Data.Text (Text)
 import qualified Data.Text as T
