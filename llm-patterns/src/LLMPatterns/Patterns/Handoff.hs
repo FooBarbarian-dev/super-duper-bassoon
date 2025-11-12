@@ -87,5 +87,9 @@ executeHandoff maxHops agents input
           -- Extract next agent ID from "HANDOFF: agentId reason..."
           case T.words (T.strip $ T.drop 8 rest) of
             (nextAgentText:reasonWords) ->
-              HandoffTo (AgentId nextAgentText) (T.unwords reasonWords)
+              -- Check if this is a COMPLETE marker (strip markdown decorators)
+              let cleanText = T.strip $ T.filter (\c -> c /= '*' && c /= '_') nextAgentText
+              in if T.toUpper cleanText == "COMPLETE"
+                 then Handle output  -- Execution complete, no more handoffs
+                 else HandoffTo (AgentId nextAgentText) (T.unwords reasonWords)
             [] -> Handle output

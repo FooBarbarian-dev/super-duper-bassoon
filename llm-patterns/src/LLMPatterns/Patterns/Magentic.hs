@@ -9,10 +9,12 @@ import LLMPatterns.Agent
 import Data.Text (Text)
 import qualified Data.Text as T
 import Control.Monad.Except (runExceptT, throwError)
-import Control.Monad.State (runStateT, modify)
+import Control.Monad.State (runStateT, modify, get)
+import Control.Monad.IO.Class (liftIO)
 import Data.Time.Clock (getCurrentTime, diffUTCTime)
 import qualified Data.Set as Set
 import Data.List (find)
+import Control.Concurrent.Async (mapConcurrently)
 
 -- | Task ledger for tracking work
 data TaskLedger = TaskLedger
@@ -74,7 +76,7 @@ executeMagentic maxIter agents input
           -- Fallback: treat input as single task
           pure $ TaskLedger [inputGoal] Set.empty []
 
-    -- Execute task ledger recursively
+    -- Execute task ledger recursively with parallel execution
     executeLedger :: [Agent] -> TaskLedger -> Int -> OrchestrationM Text
     executeLedger workers ledger iter
       | allTasksComplete ledger =
@@ -88,28 +90,43 @@ executeMagentic maxIter agents input
           in pure $ summary <> resultsText
       | iter >= maxIter = throwError $ MaxIterationsExceeded maxIter
       | otherwise = do
-          case findNextTask ledger of
-            Nothing -> pure "No remaining tasks"
-            Just task -> do
-              -- Record task creation
-              modify $ \s -> s { esTrace = TaskCreated task : esTrace s }
+          -- Collect all pending tasks for this batch
+          let pendingTasks = filter (`Set.notMember` tlCompleted ledger) (tlTasks ledger)
 
-              -- Get next worker (cycle through available workers)
-              let worker = head workers
+          case pendingTasks of
+            [] -> pure "No remaining tasks"
+            tasks -> do
+              -- Record task creation for all tasks in this batch
+              mapM_ (\task -> modify $ \s -> s { esTrace = TaskCreated task : esTrace s }) tasks
 
-              -- Execute task and capture result
-              taskResult <- promptAgent worker task
+              -- Assign workers to tasks (cycle through workers for load balancing)
+              let taskWorkerPairs = zip tasks (cycle workers)
 
-              -- Mark complete
-              modify $ \s -> s { esTrace = TaskCompleted task : esTrace s }
+              -- Execute all tasks in parallel
+              currentState <- get
+              results <- liftIO $ mapConcurrently
+                (\(task, worker) -> executeTaskWithWorker worker task)
+                taskWorkerPairs
 
+              -- Record task completion for all tasks
+              mapM_ (\task -> modify $ \s -> s { esTrace = TaskCompleted task : esTrace s }) tasks
+
+              -- Update ledger with all results
               let newLedger = ledger
-                    { tlCompleted = Set.insert task (tlCompleted ledger)
-                    , tlResults = tlResults ledger ++ [(task, taskResult)]
+                    { tlCompleted = Set.union (tlCompleted ledger) (Set.fromList tasks)
+                    , tlResults = tlResults ledger ++ results
                     }
 
-              -- Continue with next iteration, rotating workers
-              executeLedger (tail workers ++ [head workers]) newLedger (iter + 1)
+              -- Continue with next iteration if there are more tasks
+              executeLedger workers newLedger (iter + 1)
+
+    -- Execute a single task with a worker (used by parallel execution)
+    executeTaskWithWorker :: Agent -> Text -> IO (Text, Text)
+    executeTaskWithWorker worker task = do
+      (result, _) <- runStateT (runExceptT $ promptAgent worker task) initialState
+      case result of
+        Right output -> pure (task, output)
+        Left _ -> pure (task, "Task failed")
 
     -- Check if all tasks are complete
     allTasksComplete :: TaskLedger -> Bool

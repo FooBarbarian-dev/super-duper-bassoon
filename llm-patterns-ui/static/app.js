@@ -1,12 +1,9 @@
 // LLM Orchestration Patterns UI - 5 Tab Comparison
 // ================================================
+// REFACTORED: Configuration now loaded from Haskell backend APIs
 
-// Provider Models Configuration
-const providerModels = {
-  ollama: ['llama3.2', 'llama3.1', 'mistral', 'codellama', 'phi3'],
-  openai: ['gpt-4o', 'gpt-5', 'gpt-5-mini', 'gpt-4o-mini', 'gpt-o3'],
-  claude: ['claude-sonnet-4-5-20250929', 'claude-3-5-sonnet-20241022', 'claude-opus-4-20250514', 'claude-3-5-haiku-20241022']
-};
+// Provider Models Configuration - loaded from /api/providers
+let providerModels = {};
 
 // Global State Management
 const state = {
@@ -50,8 +47,19 @@ const state = {
   }
 };
 
-// Default agent configurations per pattern
-const defaultAgents = {
+// Default agent configurations per pattern - loaded from /api/patterns/:name
+let defaultAgents = {
+  // Will be populated by loadPatternDefaults()
+  sequential: [],
+  concurrent: [],
+  groupchat: [],
+  handoff: [],
+  magentic: []
+};
+
+// REMOVED: All hardcoded defaults moved to Haskell backend (PatternDefaults module)
+// This is the OLD version - kept for reference but not used:
+const LEGACY_defaultAgents = {
   sequential: [
     {
       acId: 'analyzer',
@@ -175,21 +183,73 @@ mermaid.initialize({
 });
 
 // Initialize Application
-document.addEventListener('DOMContentLoaded', () => {
+// ============================================================================
+// API Integration Functions - Load configurations from Haskell backend
+// ============================================================================
+
+// Load provider information from backend
+async function loadProviders() {
+  try {
+    const response = await fetch('/api/providers');
+    const providers = await response.json();
+
+    // Convert to providerModels format
+    providerModels = {};
+    providers.forEach(provider => {
+      providerModels[provider.providerName] = provider.providerModels;
+    });
+
+    console.log('✓ Loaded providers from backend:', Object.keys(providerModels));
+    return true;
+  } catch (error) {
+    console.error('Failed to load providers:', error);
+    // Fallback to empty object
+    providerModels = {};
+    return false;
+  }
+}
+
+// Load default agent configurations for all patterns from backend
+async function loadPatternDefaults() {
+  const patterns = ['sequential', 'concurrent', 'groupchat', 'handoff', 'magentic'];
+
+  for (const pattern of patterns) {
+    try {
+      const response = await fetch(`/api/patterns/${pattern}`);
+      const data = await response.json();
+
+      defaultAgents[pattern] = data.pdAgents || [];
+      console.log(`✓ Loaded ${pattern} default agents:`, defaultAgents[pattern].map(a => a.acId).join(', '));
+    } catch (error) {
+      console.error(`Failed to load ${pattern} defaults:`, error);
+      // Keep empty array as fallback
+      defaultAgents[pattern] = [];
+    }
+  }
+
+  return true;
+}
+
+// Initialize the app with data from backend
+async function initializeApp() {
   console.log('Initializing LLM Orchestration Patterns UI...');
 
+  // Load configurations from backend
+  await loadProviders();
+  await loadPatternDefaults();
+
+  // Initialize app state and UI
   initializeState();
   initializeEventListeners();
-  // WebSocket not currently used - remove connection attempt
-  // initializeWebSocket();
   setWebSocketStatus('unavailable');
   renderAllAgents();
-
-  // Only render DAG for the currently active tab (sequential) initially
   renderDAG('sequential');
 
-  console.log('UI initialized successfully');
-});
+  console.log('✓ UI initialized successfully');
+}
+
+// Start initialization when DOM is ready
+document.addEventListener('DOMContentLoaded', initializeApp);
 
 // Initialize State with Default Agents
 function initializeState() {

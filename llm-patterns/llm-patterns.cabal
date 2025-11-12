@@ -24,6 +24,7 @@ common shared-properties
                       -Wmissing-home-modules
                       -Wpartial-fields
                       -Wredundant-constraints
+                      -threaded
   default-extensions: OverloadedStrings
 
 library
@@ -34,12 +35,15 @@ library
     LLMPatterns.Agent
     LLMPatterns.Orchestrator
     LLMPatterns.Config
+    LLMPatterns.PatternDefaults
+    LLMPatterns.Logging
     LLMPatterns.Patterns.Sequential
     LLMPatterns.Patterns.Concurrent
     LLMPatterns.Patterns.GroupChat
     LLMPatterns.Patterns.Handoff
     LLMPatterns.Patterns.Magentic
     Langchain.LLM.Core
+    Langchain.LLM.Retry
 
   build-depends:
     base              >= 4.14 && < 5,
@@ -55,7 +59,8 @@ library
     http-client-tls   >= 0.3,
     http-conduit      >= 2.3,
     bytestring        >= 0.10,
-    http-types        >= 0.12
+    http-types        >= 0.12,
+    fast-logger       >= 3.0
 
   hs-source-dirs:     src
 

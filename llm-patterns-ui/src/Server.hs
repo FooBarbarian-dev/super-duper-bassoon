@@ -11,6 +11,7 @@ import Servant
 import Servant.Server.StaticFiles (serveDirectoryWith)
 import API
 import LLMPatterns
+import LLMPatterns.PatternDefaults
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
@@ -26,12 +27,15 @@ import Data.Traversable (for)
 import Data.Foldable (traverse_)
 import Data.Either (partitionEithers)
 import System.Log.FastLogger
-import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as BSL
 
 -- | Server implementation using more idiomatic handler composition
 server :: Server API
-server = executeHandler
+server = patternsHandler
+    :<|> patternDefaultsHandler
+    :<|> providersHandler
+    :<|> validateAgentHandler
+    :<|> executeHandler
     :<|> compareHandler
     :<|> wsHandler
     :<|> serveStatic
@@ -42,6 +46,28 @@ server = executeHandler
           { ssIndices = [unsafeToPiece "index.html"]
           , ssMaxAge = MaxAgeSeconds 3600
           }
+
+-- | Get all available patterns
+patternsHandler :: Handler [PatternInfo]
+patternsHandler = pure getAllPatterns
+
+-- | Get default configuration for a specific pattern
+patternDefaultsHandler :: Text -> Handler PatternDefaults
+patternDefaultsHandler name =
+  case getPatternDefaults name of
+    Just defaults -> pure defaults
+    Nothing -> throwError err404 { errBody = "Pattern not found: " <> BSL.fromStrict (TE.encodeUtf8 name) }
+
+-- | Get all available providers
+providersHandler :: Handler [ProviderInfo]
+providersHandler = pure getAllProviders
+
+-- | Validate an agent configuration
+validateAgentHandler :: AgentConfig -> Handler ValidationResponse
+validateAgentHandler config =
+  case fromConfig config of
+    Left err -> pure $ ValidationResponse False (Just $ errorToText err)
+    Right _ -> pure $ ValidationResponse True Nothing
 
 -- | Execute a single pattern
 -- More idiomatic: uses traverse and ExceptT-style error handling
