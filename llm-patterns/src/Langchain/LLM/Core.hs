@@ -27,11 +27,10 @@ import Data.Aeson (FromJSON, ToJSON, object, (.=), (.:))
 import qualified Data.Aeson as JSON
 import Data.Aeson.Types (Parser, parseMaybe)
 import Network.HTTP.Simple
-import Network.HTTP.Client (responseTimeoutMicro, HttpException(..), HttpExceptionContent(..))
+import Network.HTTP.Client (responseTimeoutMicro)
 import qualified Data.ByteString.Lazy as BSL
-import qualified Data.ByteString as BS
 import System.Environment (lookupEnv)
-import Control.Exception (try, SomeException, catch)
+import Control.Exception (try, SomeException)
 import Langchain.LLM.Retry
 
 -- | Role in a conversation

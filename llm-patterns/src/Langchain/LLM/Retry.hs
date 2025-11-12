@@ -10,9 +10,8 @@ module Langchain.LLM.Retry
   , withExponentialBackoff
   ) where
 
-import Control.Exception (try, SomeException, Exception(..), catch)
+import Control.Exception (try, SomeException)
 import Control.Concurrent (threadDelay)
-import Data.Text (Text)
 import qualified Data.Text as T
 
 -- | Retry configuration
@@ -46,7 +45,7 @@ withRetry config action = go 0
       | otherwise = do
           result <- try action
           case result of
-            Left (exception :: SomeException) -> do
+            Left (_ :: SomeException) -> do
               -- Network/exception error - retry
               let delay = calculateDelay config attempt
               threadDelay delay

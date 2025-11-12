@@ -12,7 +12,6 @@ import Servant.Server.StaticFiles (serveDirectoryWith)
 import API
 import LLMPatterns
 import LLMPatterns.PatternDefaults
-import LLMPatterns.Logging
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
@@ -28,7 +27,6 @@ import Data.Traversable (for)
 import Data.Foldable (traverse_)
 import Data.Either (partitionEithers)
 import System.Log.FastLogger
-import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as BSL
 
 -- | Server implementation using more idiomatic handler composition

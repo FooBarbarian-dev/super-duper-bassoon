@@ -18,9 +18,6 @@ module LLMPatterns.PatternDefaults
 import LLMPatterns.Types
 import LLMPatterns.Agent (AgentConfig(..))
 import Data.Text (Text)
-import qualified Data.Text as T
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
 import Data.Aeson (FromJSON, ToJSON)
 
