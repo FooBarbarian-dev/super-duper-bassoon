@@ -16,7 +16,7 @@ module LLMPatterns.PatternDefaults
   ) where
 
 import LLMPatterns.Types
-import LLMPatterns.Agent (AgentConfig)
+import LLMPatterns.Agent (AgentConfig(..))
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Map.Strict (Map)
