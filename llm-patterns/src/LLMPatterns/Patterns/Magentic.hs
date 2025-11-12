@@ -18,6 +18,7 @@ import Data.List (find)
 data TaskLedger = TaskLedger
   { tlTasks :: [Text]
   , tlCompleted :: Set.Set Text
+  , tlResults :: [(Text, Text)]  -- (task, result) pairs
   } deriving (Show, Eq)
 
 -- | Execute magentic pattern with task decomposition
@@ -68,15 +69,23 @@ executeMagentic maxIter agents input
       case result of
         Right taskList ->
           let tasks = filter (not . T.null) $ T.lines taskList
-          in pure $ TaskLedger tasks Set.empty
+          in pure $ TaskLedger tasks Set.empty []
         Left _ ->
           -- Fallback: treat input as single task
-          pure $ TaskLedger [inputGoal] Set.empty
+          pure $ TaskLedger [inputGoal] Set.empty []
 
     -- Execute task ledger recursively
     executeLedger :: [Agent] -> TaskLedger -> Int -> OrchestrationM Text
     executeLedger workers ledger iter
-      | allTasksComplete ledger = pure $ T.pack $ "All " ++ show (length (tlTasks ledger)) ++ " tasks completed successfully"
+      | allTasksComplete ledger =
+          -- Aggregate all results
+          let resultsText = T.unlines
+                [ T.concat ["## ", task, "\n\n", result, "\n"]
+                | (task, result) <- tlResults ledger
+                ]
+              summary = T.pack $ "# Task Completion Summary\n\n"
+                     ++ "Completed " ++ show (length (tlTasks ledger)) ++ " tasks:\n\n"
+          in pure $ summary <> resultsText
       | iter >= maxIter = throwError $ MaxIterationsExceeded maxIter
       | otherwise = do
           case findNextTask ledger of
@@ -88,13 +97,16 @@ executeMagentic maxIter agents input
               -- Get next worker (cycle through available workers)
               let worker = head workers
 
-              -- Execute task
-              _ <- promptAgent worker task
+              -- Execute task and capture result
+              taskResult <- promptAgent worker task
 
               -- Mark complete
               modify $ \s -> s { esTrace = TaskCompleted task : esTrace s }
 
-              let newLedger = ledger { tlCompleted = Set.insert task (tlCompleted ledger) }
+              let newLedger = ledger
+                    { tlCompleted = Set.insert task (tlCompleted ledger)
+                    , tlResults = tlResults ledger ++ [(task, taskResult)]
+                    }
 
               -- Continue with next iteration, rotating workers
               executeLedger (tail workers ++ [head workers]) newLedger (iter + 1)

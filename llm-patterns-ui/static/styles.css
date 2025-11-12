@@ -3,37 +3,38 @@
    ============================================ */
 
 :root {
-  /* Color Palette */
-  --bg-primary: #0a0e27;
-  --bg-secondary: #000000;
-  --bg-panel: #0d1128;
-  --bg-input: #0f1330;
+  /* Enhanced Cyberpunk Color Palette */
+  --bg-primary: #000b1e;
+  --bg-secondary: #0a0e27;
+  --bg-panel: #0f1330;
+  --bg-input: #14182e;
+  --bg-hover: #1a1f3a;
 
-  --text-primary: #ffffff;
-  --text-secondary: #b8c5db;
+  --text-primary: #e0e6f0;
+  --text-secondary: #9fa8c0;
   --text-dim: #6b7a99;
 
   --accent-cyan: #00ffff;
   --accent-teal: #00d9ff;
-  --accent-purple: #b537f2;
-  --accent-pink: #ff00ff;
+  --accent-purple: #9d00ff;
+  --accent-pink: #ff0080;
 
-  --success: #00ff00;
-  --warning: #ffcc00;
-  --error: #ff0000;
+  --success: #39ff14;
+  --warning: #ffa500;
+  --error: #ff0055;
 
-  /* Glow Effects */
-  --glow-cyan: 0 0 10px rgba(0, 255, 255, 0.5), 0 0 20px rgba(0, 255, 255, 0.3);
-  --glow-green: 0 0 10px rgba(0, 255, 0, 0.5), 0 0 20px rgba(0, 255, 0, 0.3);
-  --glow-red: 0 0 10px rgba(255, 0, 0, 0.5), 0 0 20px rgba(255, 0, 0, 0.3);
-  --glow-purple: 0 0 10px rgba(181, 55, 242, 0.5), 0 0 20px rgba(181, 55, 242, 0.3);
+  /* Enhanced Glow Effects */
+  --glow-cyan: 0 0 15px rgba(0, 255, 255, 0.6), 0 0 30px rgba(0, 255, 255, 0.3), 0 0 45px rgba(0, 255, 255, 0.1);
+  --glow-green: 0 0 15px rgba(57, 255, 20, 0.6), 0 0 30px rgba(57, 255, 20, 0.3);
+  --glow-purple: 0 0 15px rgba(157, 0, 255, 0.6), 0 0 30px rgba(157, 0, 255, 0.3);
+  --glow-pink: 0 0 15px rgba(255, 0, 128, 0.6), 0 0 30px rgba(255, 0, 128, 0.3);
 
-  /* Spacing */
-  --spacing-xs: 0.5rem;
-  --spacing-sm: 1rem;
-  --spacing-md: 1.5rem;
-  --spacing-lg: 2rem;
-  --spacing-xl: 3rem;
+  /* Improved Spacing - Less Dense */
+  --spacing-xs: 0.75rem;
+  --spacing-sm: 1.25rem;
+  --spacing-md: 2rem;
+  --spacing-lg: 2.5rem;
+  --spacing-xl: 3.5rem;
 
   /* Typography */
   --font-header: 'Orbitron', sans-serif;
@@ -667,10 +668,16 @@ body {
 }
 
 .log-entry {
-  padding: var(--spacing-xs);
+  padding: var(--spacing-sm);
   border-left: 3px solid transparent;
-  margin-bottom: 4px;
+  margin-bottom: var(--spacing-xs);
   animation: slideIn 0.3s ease;
+  border-radius: 3px;
+  transition: background 0.2s ease;
+}
+
+.log-entry:hover {
+  background: rgba(0, 255, 255, 0.05);
 }
 
 @keyframes slideIn {
@@ -723,6 +730,77 @@ body {
   color: var(--text-dim);
   text-align: center;
   padding: var(--spacing-md);
+  font-style: italic;
+}
+
+/* Markdown styling for log entries (agent responses) */
+.log-markdown {
+  font-family: var(--font-body);
+  padding: var(--spacing-sm);
+  margin-top: var(--spacing-xs);
+  background: rgba(0, 255, 255, 0.03);
+  border-radius: 4px;
+  border-left: 3px solid var(--accent-cyan);
+}
+
+.log-markdown h1, .log-markdown h2, .log-markdown h3,
+.log-markdown h4, .log-markdown h5, .log-markdown h6 {
+  color: var(--accent-cyan);
+  font-family: var(--font-header);
+  margin-top: 0.75rem;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.log-markdown h1 { font-size: 1.2rem; }
+.log-markdown h2 { font-size: 1.1rem; }
+.log-markdown h3 { font-size: 1rem; }
+
+.log-markdown p {
+  margin-bottom: 0.5rem;
+  line-height: 1.6;
+}
+
+.log-markdown ul, .log-markdown ol {
+  margin-left: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.log-markdown li {
+  margin-bottom: 0.25rem;
+  line-height: 1.5;
+}
+
+.log-markdown code {
+  background: var(--bg-panel);
+  color: var(--accent-teal);
+  padding: 0.15rem 0.3rem;
+  border-radius: 2px;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+}
+
+.log-markdown pre {
+  background: var(--bg-panel);
+  border: 1px solid var(--accent-teal);
+  border-radius: 3px;
+  padding: 0.75rem;
+  overflow-x: auto;
+  margin-bottom: 0.5rem;
+}
+
+.log-markdown pre code {
+  background: none;
+  padding: 0;
+}
+
+.log-markdown strong {
+  color: var(--accent-teal);
+  font-weight: 700;
+}
+
+.log-markdown em {
+  color: var(--text-secondary);
   font-style: italic;
 }
 
