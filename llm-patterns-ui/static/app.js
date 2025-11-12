@@ -57,13 +57,13 @@ const defaultAgents = {
       acId: 'analyzer',
       acProvider: 'openai',
       acModel: 'gpt-4o',
-      acSystemPrompt: 'You are an analytical AI that breaks down problems into components.'
+      acSystemPrompt: 'You are an analytical AI. When given input, break it down into key components, identify patterns, and provide structured analysis. Focus on clarity, logic, and identifying important details. Output your analysis in a clear, organized format.'
     },
     {
       acId: 'synthesizer',
       acProvider: 'claude',
       acModel: 'claude-sonnet-4-5-20250929',
-      acSystemPrompt: 'You are a synthesis AI that combines insights into coherent solutions.'
+      acSystemPrompt: 'You are a synthesis AI. You receive analyzed information and combine it into coherent, actionable insights. Build upon the analysis provided, connect ideas, and create comprehensive solutions. Present your synthesis in a clear, well-structured format.'
     }
   ],
   concurrent: [
@@ -71,19 +71,19 @@ const defaultAgents = {
       acId: 'expert1',
       acProvider: 'openai',
       acModel: 'gpt-4o',
-      acSystemPrompt: 'You are an AI expert focusing on technical accuracy.'
+      acSystemPrompt: 'You are a technical accuracy expert. Analyze the input for correctness, identify technical details, verify facts, and point out potential errors. Provide a technically rigorous perspective focused on precision and accuracy.'
     },
     {
       acId: 'expert2',
       acProvider: 'claude',
       acModel: 'claude-sonnet-4-5-20250929',
-      acSystemPrompt: 'You are an AI expert focusing on practical applications.'
+      acSystemPrompt: 'You are a practical applications expert. Focus on real-world applicability, implementation feasibility, and actionable steps. Provide concrete, practical insights on how to apply concepts effectively.'
     },
     {
       acId: 'expert3',
       acProvider: 'openai',
       acModel: 'gpt-4o',
-      acSystemPrompt: 'You are an AI expert focusing on creative solutions.'
+      acSystemPrompt: 'You are a creative solutions expert. Think outside the box, explore unconventional approaches, and suggest innovative ideas. Challenge assumptions and propose novel perspectives that others might miss.'
     }
   ],
   groupchat: [
@@ -91,19 +91,19 @@ const defaultAgents = {
       acId: 'facilitator',
       acProvider: 'openai',
       acModel: 'gpt-4o',
-      acSystemPrompt: 'You facilitate discussions and summarize key points.'
+      acSystemPrompt: 'You are a discussion facilitator. Guide the conversation forward by summarizing key points from previous messages, identifying areas of agreement and disagreement, and asking clarifying questions. Keep the discussion focused and productive.'
     },
     {
       acId: 'critic',
       acProvider: 'claude',
       acModel: 'claude-sonnet-4-5-20250929',
-      acSystemPrompt: 'You provide critical analysis and identify potential issues.'
+      acSystemPrompt: 'You are a constructive critic. Analyze previous responses critically, identify flaws, edge cases, and potential issues. Challenge weak arguments and point out overlooked considerations. Be rigorous but fair in your critique.'
     },
     {
       acId: 'builder',
       acProvider: 'openai',
       acModel: 'gpt-4o',
-      acSystemPrompt: 'You build upon ideas and propose concrete implementations.'
+      acSystemPrompt: 'You are an implementation builder. Take ideas from the discussion and transform them into concrete, actionable plans. Provide specific steps, examples, and implementations. Build upon both positive ideas and critiques to create robust solutions.'
     }
   ],
   handoff: [
@@ -111,19 +111,19 @@ const defaultAgents = {
       acId: 'router',
       acProvider: 'openai',
       acModel: 'gpt-4o',
-      acSystemPrompt: 'You route tasks to specialized agents based on requirements.'
+      acSystemPrompt: 'You are a routing coordinator. Analyze incoming requests, determine which specialist is best suited to handle them, and provide clear delegation instructions. If you can fully answer the request yourself, do so and mark it as COMPLETE. Otherwise, specify which specialist should handle it and why.'
     },
     {
       acId: 'specialist_a',
       acProvider: 'claude',
       acModel: 'claude-sonnet-4-5-20250929',
-      acSystemPrompt: 'You are a specialist in data analysis and processing.'
+      acSystemPrompt: 'You are a data analysis specialist. Handle requests involving data processing, statistical analysis, pattern recognition, and information extraction. Provide detailed analysis with supporting data and insights. Mark your response as COMPLETE when finished.'
     },
     {
       acId: 'specialist_b',
       acProvider: 'openai',
       acModel: 'gpt-4o',
-      acSystemPrompt: 'You are a specialist in solution design and architecture.'
+      acSystemPrompt: 'You are a solution architecture specialist. Handle requests involving system design, architecture decisions, and implementation strategies. Provide structured architectural recommendations with justifications. Mark your response as COMPLETE when finished.'
     }
   ],
   magentic: [
@@ -131,19 +131,19 @@ const defaultAgents = {
       acId: 'manager',
       acProvider: 'openai',
       acModel: 'gpt-4o',
-      acSystemPrompt: 'You are a manager that decomposes tasks and coordinates workers.'
+      acSystemPrompt: 'You are a task manager. When given a goal, break it down into 3-5 specific, actionable subtasks. Each subtask should be concrete and completable. Format your response as a simple list, one task per line. Be concise - just list the tasks without additional explanation.'
     },
     {
       acId: 'worker1',
       acProvider: 'claude',
       acModel: 'claude-sonnet-4-5-20250929',
-      acSystemPrompt: 'You are a worker agent that executes assigned subtasks efficiently.'
+      acSystemPrompt: 'You are a task worker. Execute the specific task assigned to you efficiently and thoroughly. Provide complete, detailed results. Focus on delivering high-quality output for your assigned task.'
     },
     {
       acId: 'worker2',
       acProvider: 'openai',
       acModel: 'gpt-4o',
-      acSystemPrompt: 'You are a worker agent specialized in verification and quality checks.'
+      acSystemPrompt: 'You are a quality assurance worker. Execute tasks with attention to detail, verify correctness, and ensure completeness. Provide thorough, validated results with quality checks included.'
     }
   ]
 };
@@ -1021,6 +1021,9 @@ function setResult(pattern, result) {
     const wordCount = output.split(/\s+/).length;
     const charCount = output.length;
 
+    // Render output as markdown
+    const renderedMarkdown = marked.parse(output);
+
     resultContainer.innerHTML = `
       <div class="result-header">
         <span class="result-badge success">SUCCESS</span>
@@ -1030,7 +1033,7 @@ function setResult(pattern, result) {
           🔤 ${charCount} chars
         </span>
       </div>
-      <div class="result-content">${escapeHtml(output)}</div>
+      <div class="result-content result-markdown">${renderedMarkdown}</div>
     `;
   }
 }

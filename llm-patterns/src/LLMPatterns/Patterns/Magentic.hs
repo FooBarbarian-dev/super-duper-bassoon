@@ -75,9 +75,9 @@ executeMagentic maxIter agents input
 
     -- Execute task ledger recursively
     executeLedger :: [Agent] -> TaskLedger -> Int -> OrchestrationM Text
-    executeLedger _ ledger iter
+    executeLedger workers ledger iter
+      | allTasksComplete ledger = pure $ T.pack $ "All " ++ show (length (tlTasks ledger)) ++ " tasks completed successfully"
       | iter >= maxIter = throwError $ MaxIterationsExceeded maxIter
-      | allTasksComplete ledger = pure "All tasks completed successfully"
       | otherwise = do
           case findNextTask ledger of
             Nothing -> pure "No remaining tasks"
@@ -85,8 +85,8 @@ executeMagentic maxIter agents input
               -- Record task creation
               modify $ \s -> s { esTrace = TaskCreated task : esTrace s }
 
-              -- Get next worker
-              let worker = head $ drop iter $ cycle workersList
+              -- Get next worker (cycle through available workers)
+              let worker = head workers
 
               -- Execute task
               _ <- promptAgent worker task
@@ -96,10 +96,8 @@ executeMagentic maxIter agents input
 
               let newLedger = ledger { tlCompleted = Set.insert task (tlCompleted ledger) }
 
-              -- Continue with next iteration
-              executeLedger (tail workersList) newLedger (iter + 1)
-      where
-        workersList = drop 1 agents
+              -- Continue with next iteration, rotating workers
+              executeLedger (tail workers ++ [head workers]) newLedger (iter + 1)
 
     -- Check if all tasks are complete
     allTasksComplete :: TaskLedger -> Bool

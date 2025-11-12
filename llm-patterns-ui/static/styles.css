@@ -803,6 +803,106 @@ body {
   color: var(--error);
 }
 
+/* Markdown Styling */
+.result-markdown h1, .result-markdown h2, .result-markdown h3,
+.result-markdown h4, .result-markdown h5, .result-markdown h6 {
+  color: var(--accent-cyan);
+  font-family: var(--font-header);
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  font-weight: 700;
+}
+
+.result-markdown h1 { font-size: 1.8rem; border-bottom: 2px solid var(--accent-cyan); padding-bottom: 0.5rem; }
+.result-markdown h2 { font-size: 1.5rem; }
+.result-markdown h3 { font-size: 1.3rem; }
+
+.result-markdown p {
+  margin-bottom: 1rem;
+  line-height: 1.8;
+}
+
+.result-markdown ul, .result-markdown ol {
+  margin-left: 2rem;
+  margin-bottom: 1rem;
+}
+
+.result-markdown li {
+  margin-bottom: 0.5rem;
+  line-height: 1.6;
+}
+
+.result-markdown code {
+  background: var(--bg-panel);
+  color: var(--accent-cyan);
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+.result-markdown pre {
+  background: var(--bg-panel);
+  border: 1px solid var(--accent-cyan);
+  border-radius: 4px;
+  padding: 1rem;
+  overflow-x: auto;
+  margin-bottom: 1rem;
+}
+
+.result-markdown pre code {
+  background: none;
+  padding: 0;
+}
+
+.result-markdown blockquote {
+  border-left: 4px solid var(--accent-cyan);
+  padding-left: 1rem;
+  margin-left: 0;
+  margin-bottom: 1rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.result-markdown strong {
+  color: var(--accent-teal);
+  font-weight: 700;
+}
+
+.result-markdown em {
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.result-markdown a {
+  color: var(--accent-teal);
+  text-decoration: none;
+  border-bottom: 1px solid var(--accent-teal);
+}
+
+.result-markdown a:hover {
+  color: var(--accent-cyan);
+  border-bottom-color: var(--accent-cyan);
+}
+
+.result-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+}
+
+.result-markdown th, .result-markdown td {
+  border: 1px solid var(--accent-cyan);
+  padding: 0.5rem;
+  text-align: left;
+}
+
+.result-markdown th {
+  background: var(--bg-panel);
+  color: var(--accent-cyan);
+  font-weight: 700;
+}
+
 /* ============================================
    ERROR TOAST
    ============================================ */
