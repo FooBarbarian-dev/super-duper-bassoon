@@ -24,6 +24,7 @@ common shared-properties
                       -Wmissing-home-modules
                       -Wpartial-fields
                       -Wredundant-constraints
+                      -threaded
   default-extensions: OverloadedStrings
 
 library
