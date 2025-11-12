@@ -9,6 +9,7 @@ module API where
 import Servant
 import Servant.API.WebSocket (WebSocket)
 import LLMPatterns
+import LLMPatterns.PatternDefaults (ProviderInfo, PatternInfo, PatternDefaults)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Aeson (FromJSON, ToJSON)
@@ -17,8 +18,16 @@ import GHC.Generics (Generic)
 -- | Main API type
 -- More idiomatic: clean type-level API definition
 type API =
-       "api" :> "execute" :> ReqBody '[JSON] ExecuteRequest :> Post '[JSON] ExecuteResponse
+       -- Pattern metadata and defaults
+       "api" :> "patterns" :> Get '[JSON] [PatternInfo]
+  :<|> "api" :> "patterns" :> Capture "name" Text :> Get '[JSON] PatternDefaults
+  :<|> "api" :> "providers" :> Get '[JSON] [ProviderInfo]
+  -- Agent validation
+  :<|> "api" :> "validate" :> "agent" :> ReqBody '[JSON] AgentConfig :> Post '[JSON] ValidationResponse
+  -- Pattern execution
+  :<|> "api" :> "execute" :> ReqBody '[JSON] ExecuteRequest :> Post '[JSON] ExecuteResponse
   :<|> "api" :> "compare" :> ReqBody '[JSON] CompareRequest :> Post '[JSON] CompareResponse
+  -- WebSocket and static files
   :<|> "api" :> "ws" :> "execute" :> WebSocket
   :<|> Raw  -- Serve static files
 
@@ -49,6 +58,13 @@ data CompareRequest = CompareRequest
 -- | Comparison response with results for each pattern
 data CompareResponse = CompareResponse
   { cmpResults :: [(Text, ExecuteResponse)]
+  } deriving stock (Show, Eq, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
+-- | Validation response
+data ValidationResponse = ValidationResponse
+  { vrValid :: Bool
+  , vrError :: Maybe Text
   } deriving stock (Show, Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)
 

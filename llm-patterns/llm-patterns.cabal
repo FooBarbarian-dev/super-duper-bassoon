@@ -34,6 +34,8 @@ library
     LLMPatterns.Agent
     LLMPatterns.Orchestrator
     LLMPatterns.Config
+    LLMPatterns.PatternDefaults
+    LLMPatterns.Logging
     LLMPatterns.Patterns.Sequential
     LLMPatterns.Patterns.Concurrent
     LLMPatterns.Patterns.GroupChat
