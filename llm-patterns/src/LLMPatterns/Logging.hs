@@ -18,9 +18,6 @@ module LLMPatterns.Logging
 
 import Data.Text (Text)
 import qualified Data.Text as T
-import qualified Data.Text.IO as TIO
-import Data.Time.Clock (getCurrentTime)
-import Data.Time.Format (formatTime, defaultTimeLocale)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import System.Log.FastLogger
 import qualified Data.ByteString.Char8 as BS

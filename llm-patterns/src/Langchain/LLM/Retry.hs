@@ -37,15 +37,16 @@ defaultRetryConfig = RetryConfig
   }
 
 -- | Execute an action with retry logic
-withRetry :: RetryConfig -> IO (Either String a) -> IO (Either String a)
+withRetry :: forall a. RetryConfig -> IO (Either String a) -> IO (Either String a)
 withRetry config action = go 0
   where
+    go :: Int -> IO (Either String a)
     go attempt
       | attempt >= rcMaxRetries config = action  -- Last attempt, no retry
       | otherwise = do
-          result <- try action :: IO (Either SomeException (Either String a))
+          result <- try action
           case result of
-            Left exception -> do
+            Left (exception :: SomeException) -> do
               -- Network/exception error - retry
               let delay = calculateDelay config attempt
               threadDelay delay
